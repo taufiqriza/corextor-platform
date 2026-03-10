@@ -135,10 +135,13 @@
 
 - [x] buat shell super admin (AdminLayout with role-based nav)
 - [x] buat company list page (CompanyPanel list with search)
-- [x] buat company detail page (CompanyPanel detail view with subs)
-- [x] buat subscription summary view (SubscriptionPanel)
-- [x] buat invoice list view (InvoicePanel)
-- [ ] buat company admin summary panel _(deferred — needs aggregate API)_
+- [x] buat company detail page (CompanyPanel detail view + tabs: overview, members, subscriptions)
+- [x] buat company member management (members tab with table/card view)
+- [x] buat add subscription flow (modal with plan selection from company detail)
+- [x] buat subscription summary view → Product Overview (SubscriptionPanel → product cards + stats)
+- [x] buat invoice list view (InvoicePanel with stats grid + search/filter + table/card)
+- [x] buat dashboard with real stats (DashboardPanel: clickable stats, quick actions, recent invoices)
+- [x] buat company admin summary panel (members tab in CompanyPanel detail)
 
 ### Database
 
@@ -289,10 +292,51 @@
 - [x] siapkan monitoring minimum (doc/deployment.md)
 - [x] siapkan post-deploy smoke test (doc/deployment.md)
 
+---
+
+## 8. Sprint 7 - Admin UI Polish + Employee Portal 🔄
+
+### Backend
+
+- [x] implement GET /companies/{id}/members (all members, not just admins)
+- [x] implement GET /products/overview (products with subscriber stats + revenue)
+- [x] add CompanySubscription → product() and plan() relationships
+- [x] add eager loading product + plan on listByCompany()
+- [x] implement PIN-only login (auto-detect company from global_pin_lookup)
+- [x] add global_pin_lookup migration + column
+
+### Frontend — Admin UI
+
+- [x] CompanyPanel: upgraded (stats grid, table/card, search/filter, detail with tabs)
+- [x] CompanyPanel: members tab (table/card with role pill, avatar initial)
+- [x] CompanyPanel: add subscription modal (plan selection cards, radio UI)
+- [x] SubscriptionPanel → ProductOverview (product cards, subscriber stats, plan pricing)
+- [x] InvoicePanel: upgraded (stats grid, search/filter, table/card, status pills)
+- [x] DashboardPanel: clickable stat cards, wired quick actions, recent invoices
+- [x] Sidebar: "Subscriptions" renamed → "Products"
+
+### Frontend — Employee Portal
+
+- [x] PinLoginPage: kiosk-style PIN-only login (auto-detect, 6-digit)
+- [ ] Employee Dashboard: check-in/out UI
+- [ ] Employee History: attendance history view
+- [ ] Employee Profile: view profile info
+
+### QA
+
+- [ ] test add subscription from company detail
+- [ ] test product overview shows correct stats
+- [ ] test PIN-only login flow end-to-end
+- [ ] test all admin panels responsive on mobile
+
+### Release / Ops
+
+- [ ] deploy admin UI changes to staging
+- [ ] user acceptance testing (admin panels)
 
 ---
 
-## 8. Cross-Sprint Watch Items
+## 9. Cross-Sprint Watch Items
 
 - [x] jangan bangun feature phase 2 sebelum sprint 1-6 selesai
 - [x] jangan tambahkan schema baru ke `database.md` tanpa alasan sprint yang jelas
