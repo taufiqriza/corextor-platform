@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Building2, ChevronDown, ClipboardList,
     LayoutDashboard, LogOut, MapPin, Menu, Moon, Package, Receipt,
-    Settings, Sun, UserCircle, Users, X,
+    Settings, Shield, Sun, UserCircle, Users, X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
@@ -15,6 +15,7 @@ import { BranchPanel } from '@/admin/panels/BranchPanel';
 import { AttendanceUserPanel } from '@/admin/panels/AttendanceUserPanel';
 import { AttendanceReportPanel } from '@/admin/panels/AttendanceReportPanel';
 import { SettingsPanel } from '@/admin/panels/SettingsPanel';
+import { TeamPanel } from '@/admin/panels/TeamPanel';
 
 function useIsDesktop() {
     const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
@@ -27,7 +28,7 @@ function useIsDesktop() {
     return isDesktop;
 }
 
-type AdminNavKey = 'dashboard' | 'companies' | 'subscriptions' | 'invoices' | 'branches' | 'att-users' | 'att-report' | 'settings';
+type AdminNavKey = 'dashboard' | 'companies' | 'subscriptions' | 'invoices' | 'team' | 'branches' | 'att-users' | 'att-report' | 'settings';
 
 type NavItem = { key: AdminNavKey; label: string; icon: typeof LayoutDashboard; };
 type NavGroup = { label: string; items: NavItem[]; };
@@ -45,6 +46,12 @@ const NAV_GROUPS: NavGroup[] = [
             { key: 'companies', label: 'Companies', icon: Building2 },
             { key: 'subscriptions', label: 'Products', icon: Package },
             { key: 'invoices', label: 'Invoices', icon: Receipt },
+        ],
+    },
+    {
+        label: 'Team',
+        items: [
+            { key: 'team', label: 'Team Corextor', icon: Shield },
         ],
     },
     {
@@ -68,6 +75,7 @@ const SECTION_META: Record<AdminNavKey, { title: string; subtitle: string }> = {
     companies: { title: 'Companies', subtitle: 'Kelola tenant dan organisasi.' },
     subscriptions: { title: 'Product Overview', subtitle: 'Ringkasan produk dan subscriber.' },
     invoices: { title: 'Invoices', subtitle: 'Riwayat tagihan dan pembayaran.' },
+    team: { title: 'Team Corextor', subtitle: 'Kelola staf internal platform.' },
     branches: { title: 'Branches', subtitle: 'Kelola cabang perusahaan.' },
     'att-users': { title: 'Attendance Users', subtitle: 'Kelola profil absensi karyawan.' },
     'att-report': { title: 'Attendance Report', subtitle: 'Laporan kehadiran karyawan.' },
@@ -92,22 +100,34 @@ export function AdminLayout() {
     const curveSize = 32;
     const activeMeta = SECTION_META[activeNav];
 
-    const isSuperAdmin = user?.role === 'super_admin';
-    const isCompanyAdmin = user?.role === 'company_admin';
+    const userRole = user?.role ?? 'standard';
+    const isSuperAdmin = userRole === 'super_admin';
+    const isPlatformTeam = ['super_admin', 'platform_staff'].includes(userRole);
+    const isPlatformFinance = userRole === 'platform_finance';
+    const isCompanyAdmin = userRole === 'company_admin';
     const hasAttendance = user?.active_products?.includes('attendance');
 
     const visibleGroups = useMemo(() => {
         return NAV_GROUPS.map(g => ({
             ...g,
             items: g.items.filter(item => {
-                if (['dashboard'].includes(item.key)) return true;
-                if (['companies', 'invoices'].includes(item.key)) return isSuperAdmin;
-                if (item.key === 'subscriptions') return isSuperAdmin || isCompanyAdmin;
-                if (['branches', 'att-users', 'att-report'].includes(item.key)) return (isSuperAdmin || isCompanyAdmin) && hasAttendance;
+                if (item.key === 'dashboard') return true;
+                // Team — super_admin only
+                if (item.key === 'team') return isSuperAdmin;
+                // Companies — super_admin + platform_staff
+                if (item.key === 'companies') return isPlatformTeam;
+                // Products — super_admin + platform_staff
+                if (item.key === 'subscriptions') return isPlatformTeam || isCompanyAdmin;
+                // Invoices — super_admin + platform_staff + platform_finance
+                if (item.key === 'invoices') return isPlatformTeam || isPlatformFinance;
+                // Attendance — super_admin + platform_staff + company_admin (if has product)
+                if (['branches', 'att-users', 'att-report'].includes(item.key))
+                    return (isPlatformTeam || isCompanyAdmin) && hasAttendance;
+                // Settings — everyone
                 return true;
             }),
         })).filter(g => g.items.length > 0);
-    }, [isSuperAdmin, isCompanyAdmin, hasAttendance]);
+    }, [isSuperAdmin, isPlatformTeam, isPlatformFinance, isCompanyAdmin, hasAttendance]);
 
     const handleSelectNav = (key: AdminNavKey) => {
         setActiveNav(key);
@@ -134,6 +154,7 @@ export function AdminLayout() {
             case 'companies': return <CompanyPanel T={T} isDesktop={isDesktop} />;
             case 'subscriptions': return <SubscriptionPanel T={T} isDesktop={isDesktop} isSuperAdmin={isSuperAdmin} />;
             case 'invoices': return <InvoicePanel T={T} isDesktop={isDesktop} />;
+            case 'team': return <TeamPanel T={T} isDesktop={isDesktop} />;
             case 'branches': return <BranchPanel T={T} isDesktop={isDesktop} />;
             case 'att-users': return <AttendanceUserPanel T={T} isDesktop={isDesktop} />;
             case 'att-report': return <AttendanceReportPanel T={T} isDesktop={isDesktop} />;

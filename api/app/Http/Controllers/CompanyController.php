@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Modules\Platform\Company\CompanyService;
+use App\Modules\Platform\Membership\MemberService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -73,18 +74,22 @@ class CompanyController extends Controller
         return ApiResponse::success($result);
     }
 
+    // ── Company Members (Full CRUD via MemberService) ──
+
     /**
      * GET /platform/v1/companies/{id}/members
      */
     public function members(int $id): JsonResponse
     {
-        $members = CompanyService::getMembers($id);
+        $members = MemberService::listByCompany($id);
+        $stats = MemberService::statsForCompany($id);
 
         $result = $members->map(fn ($m) => [
             'id' => $m->id,
             'user_id' => $m->user_id,
             'role' => $m->role,
             'status' => $m->status,
+            'created_at' => $m->created_at?->toISOString(),
             'user' => $m->user ? [
                 'id' => $m->user->id,
                 'name' => $m->user->name,
@@ -92,6 +97,79 @@ class CompanyController extends Controller
             ] : null,
         ]);
 
-        return ApiResponse::success($result);
+        return ApiResponse::success([
+            'stats' => $stats,
+            'members' => $result,
+        ]);
+    }
+
+    /**
+     * POST /platform/v1/companies/{id}/members
+     */
+    public function addMember(Request $request, int $id): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email|max:255',
+            'name'  => 'sometimes|string|max:255',
+            'role'  => 'required|string|in:company_admin,employee',
+        ]);
+
+        try {
+            $membership = MemberService::addMember($id, $request->only(['email', 'name', 'role']));
+
+            return ApiResponse::created([
+                'id' => $membership->id,
+                'user_id' => $membership->user_id,
+                'role' => $membership->role,
+                'status' => $membership->status,
+                'user' => $membership->user ? [
+                    'id' => $membership->user->id,
+                    'name' => $membership->user->name,
+                    'email' => $membership->user->email,
+                ] : null,
+            ]);
+        } catch (\RuntimeException $e) {
+            return ApiResponse::conflict($e->getMessage());
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::badRequest($e->getMessage());
+        }
+    }
+
+    /**
+     * PUT /platform/v1/companies/{id}/members/{membershipId}
+     */
+    public function updateMember(Request $request, int $id, int $membershipId): JsonResponse
+    {
+        $request->validate([
+            'role'   => 'sometimes|string|in:company_admin,employee',
+            'status' => 'sometimes|string|in:active,suspended',
+        ]);
+
+        try {
+            $membership = MemberService::updateMember($id, $membershipId, $request->only(['role', 'status']));
+
+            return ApiResponse::success([
+                'id' => $membership->id,
+                'user_id' => $membership->user_id,
+                'role' => $membership->role,
+                'status' => $membership->status,
+                'user' => $membership->user ? [
+                    'id' => $membership->user->id,
+                    'name' => $membership->user->name,
+                    'email' => $membership->user->email,
+                ] : null,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::badRequest($e->getMessage());
+        }
+    }
+
+    /**
+     * DELETE /platform/v1/companies/{id}/members/{membershipId}
+     */
+    public function removeMember(int $id, int $membershipId): JsonResponse
+    {
+        MemberService::removeMember($id, $membershipId);
+        return ApiResponse::success(null, 'Member removed.');
     }
 }

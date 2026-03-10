@@ -10,14 +10,15 @@ class MembershipService
     /**
      * Resolve effective role for a user.
      *
-     * Rule from roles.md:
-     * - If users.platform_role = super_admin → effective role is super_admin
+     * Rule:
+     * - If users.platform_role is internal (super_admin, platform_staff, platform_finance) → use it directly
      * - Otherwise → effective role from company_memberships.role
      */
     public static function resolveEffectiveRole(User $user, ?int $companyId = null): ?string
     {
-        if ($user->isSuperAdmin()) {
-            return 'super_admin';
+        // Internal team members always use their platform_role
+        if ($user->isInternalTeam()) {
+            return $user->platform_role;
         }
 
         if (! $companyId) {
@@ -40,11 +41,11 @@ class MembershipService
      */
     public static function resolveCurrentCompany(User $user, ?int $preferredCompanyId = null): ?Company
     {
-        if ($user->isSuperAdmin()) {
+        // Internal team members can access any company
+        if ($user->isInternalTeam()) {
             if ($preferredCompanyId) {
                 return Company::active()->find($preferredCompanyId);
             }
-            // Super admin defaults to first company if not specified
             return Company::active()->first();
         }
 

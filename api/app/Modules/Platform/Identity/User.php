@@ -56,6 +56,24 @@ class User extends Authenticatable
         return $this->platform_role === 'super_admin';
     }
 
+    public function isPlatformStaff(): bool
+    {
+        return $this->platform_role === 'platform_staff';
+    }
+
+    public function isPlatformFinance(): bool
+    {
+        return $this->platform_role === 'platform_finance';
+    }
+
+    /**
+     * Check if user is internal Corextor team (any platform role except standard).
+     */
+    public function isInternalTeam(): bool
+    {
+        return in_array($this->platform_role, ['super_admin', 'platform_staff', 'platform_finance']);
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';

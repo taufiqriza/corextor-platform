@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\TeamController;
 
 /*
 |--------------------------------------------------------------------------
@@ -34,15 +35,30 @@ Route::prefix('platform/v1')->group(function () {
         // ── Super Admin only ──
         Route::middleware('role:super_admin')->group(function () {
 
+            // Team Management (internal Corextor staff)
+            Route::get('/team', [TeamController::class, 'index']);
+            Route::post('/team/invite', [TeamController::class, 'invite']);
+            Route::put('/team/{userId}', [TeamController::class, 'update']);
+            Route::delete('/team/{userId}', [TeamController::class, 'destroy']);
+        });
+
+        // ── Platform Team (super_admin + platform_staff) ──
+        Route::middleware('role:super_admin,platform_staff')->group(function () {
+
             // Companies
             Route::get('/companies', [CompanyController::class, 'index']);
             Route::post('/companies', [CompanyController::class, 'store']);
             Route::get('/companies/{id}', [CompanyController::class, 'show']);
             Route::put('/companies/{id}', [CompanyController::class, 'update']);
             Route::get('/companies/{id}/admins', [CompanyController::class, 'admins']);
-            Route::get('/companies/{id}/members', [CompanyController::class, 'members']);
 
-            // Company Subscriptions (super admin managing)
+            // Company Members (full CRUD)
+            Route::get('/companies/{id}/members', [CompanyController::class, 'members']);
+            Route::post('/companies/{id}/members', [CompanyController::class, 'addMember']);
+            Route::put('/companies/{id}/members/{membershipId}', [CompanyController::class, 'updateMember']);
+            Route::delete('/companies/{id}/members/{membershipId}', [CompanyController::class, 'removeMember']);
+
+            // Company Subscriptions
             Route::get('/companies/{id}/subscriptions', [SubscriptionController::class, 'index']);
             Route::post('/companies/{id}/subscriptions', [SubscriptionController::class, 'store']);
 
@@ -51,13 +67,17 @@ Route::prefix('platform/v1')->group(function () {
             Route::get('/products/overview', [SubscriptionController::class, 'productOverview']);
             Route::get('/plans', [SubscriptionController::class, 'plans']);
             Route::get('/bundles', [SubscriptionController::class, 'bundles']);
+        });
+
+        // ── Platform Team + Finance ──
+        Route::middleware('role:super_admin,platform_staff,platform_finance')->group(function () {
 
             // Invoices (global)
             Route::get('/invoices', [InvoiceController::class, 'index']);
         });
 
         // ── Company Admin self-service ──
-        Route::middleware('role:company_admin,super_admin')->group(function () {
+        Route::middleware('role:company_admin,super_admin,platform_staff')->group(function () {
             Route::get('/company/subscriptions', [SubscriptionController::class, 'mySubscriptions']);
             Route::get('/company/invoices', [InvoiceController::class, 'myInvoices']);
         });

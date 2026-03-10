@@ -27,6 +27,15 @@ export const platformApi = {
     getCompanyMembers: (companyId: number) =>
         api.get(`/platform/v1/companies/${companyId}/members`),
 
+    addCompanyMember: (companyId: number, data: { email: string; name?: string; role: string }) =>
+        api.post(`/platform/v1/companies/${companyId}/members`, data),
+
+    updateCompanyMember: (companyId: number, membershipId: number, data: { role?: string; status?: string }) =>
+        api.put(`/platform/v1/companies/${companyId}/members/${membershipId}`, data),
+
+    removeCompanyMember: (companyId: number, membershipId: number) =>
+        api.delete(`/platform/v1/companies/${companyId}/members/${membershipId}`),
+
     // Subscriptions
     getCompanySubscriptions: (companyId: number) =>
         api.get(`/platform/v1/companies/${companyId}/subscriptions`),
@@ -48,6 +57,18 @@ export const platformApi = {
 
     getMyInvoices: (page = 1) =>
         api.get(`/platform/v1/company/invoices?page=${page}`),
+
+    // Team (internal Corextor staff)
+    getTeam: () => api.get('/platform/v1/team'),
+
+    inviteTeamMember: (data: { name: string; email: string; platform_role: string }) =>
+        api.post('/platform/v1/team/invite', data),
+
+    updateTeamMember: (userId: number, data: { platform_role?: string; status?: string; name?: string }) =>
+        api.put(`/platform/v1/team/${userId}`, data),
+
+    removeTeamMember: (userId: number) =>
+        api.delete(`/platform/v1/team/${userId}`),
 };
 
 export const attendanceApi = {

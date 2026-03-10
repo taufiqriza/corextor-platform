@@ -105,6 +105,14 @@ class ApiResponse
     }
 
     /**
+     * Return a 400 bad request response.
+     */
+    public static function badRequest(string $message = 'Bad Request'): JsonResponse
+    {
+        return static::error($message, 400);
+    }
+
+    /**
      * Return a 409 conflict response.
      */
     public static function conflict(string $message = 'Conflict'): JsonResponse
