@@ -1,0 +1,269 @@
+/* ══════════════════════════════════════════════
+   Corextor Platform — Global CSS Foundation
+   ════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Sora:wght@700;800;900&display=swap');
+
+/* ── Reset ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Root ── */
+:root {
+  --cx-primary: #3B82F6;
+  --cx-primary-dark: #2563EB;
+  --cx-primary-glow: #3B82F633;
+  --cx-gold: #F59E0B;
+  --cx-danger: #EF4444;
+  --cx-success: #22C55E;
+  --cx-info: #06B6D4;
+
+  --cx-bg: #0B0F1A;
+  --cx-bg-alt: #111827;
+  --cx-surface: #1F2937;
+  --cx-card: #1F2937;
+  --cx-border: #374151;
+  --cx-text: #F1F5F9;
+  --cx-text-sub: #94A3B8;
+  --cx-text-muted: #64748B;
+
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Sora', 'Plus Jakarta Sans', sans-serif;
+
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, .3);
+  --shadow-md: 0 8px 32px rgba(0, 0, 0, .5);
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  --transition-fast: all .15s ease;
+  --transition-base: all .2s ease;
+
+  --cx-mobile-gutter: 16px;
+  --cx-mobile-nav-padding: 12px;
+  --cx-mobile-nav-radius: 30px;
+}
+
+@media (max-width: 360px) {
+  :root {
+    --cx-mobile-gutter: 12px;
+    --cx-mobile-nav-padding: 10px;
+    --cx-mobile-nav-radius: 26px;
+  }
+}
+
+/* ── HTML & Body ── */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--cx-bg);
+  color: var(--cx-text);
+  line-height: 1.6;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: none;
+}
+
+/* ── Typography ── */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* ── Animations ── */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes profileDropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 6px var(--cx-primary-glow);
+  }
+
+  50% {
+    box-shadow: 0 0 22px var(--cx-primary-glow);
+  }
+}
+
+/* ── Utility Classes ── */
+.cx-fade-in {
+  animation: fadeIn .35s ease-out both;
+}
+
+.cx-slide-up {
+  animation: slideUp .45s ease-out both;
+}
+
+.cx-scale-in {
+  animation: scaleIn .25s ease-out both;
+}
+
+.cx-glass {
+  background: rgba(31, 41, 55, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, .07);
+}
+
+.cx-skeleton {
+  background: linear-gradient(90deg, var(--cx-card) 25%, var(--cx-surface) 50%, var(--cx-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-md);
+}
+
+.cx-gradient-text {
+  background: linear-gradient(135deg, var(--cx-primary), #60A5FA);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Button & Input Reset ── */
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: none;
+  outline: none;
+}
+
+button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  outline: none;
+  border: none;
+  background: transparent;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  transition: background-color 5000s ease-in-out 0s !important;
+  -webkit-text-fill-color: var(--cx-text) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--cx-text-muted);
+}
+
+/* ── Login Grid ── */
+.cx-login-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+}
+
+@media (max-width: 980px) {
+  .cx-login-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

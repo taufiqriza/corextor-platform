@@ -30,8 +30,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\CheckRole::class,
             'attendance.entitled' => \App\Http\Middleware\AttendanceEntitlement::class,
         ]);
-
-        $middleware->statefulApi();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         AppExceptionHandler::register($exceptions);
