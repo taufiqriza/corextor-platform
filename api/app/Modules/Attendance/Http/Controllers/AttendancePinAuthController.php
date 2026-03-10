@@ -15,22 +15,36 @@ class AttendancePinAuthController extends Controller
      * POST /attendance/v1/auth/login/pin
      *
      * PIN login for attendance employees.
+     * Supports two modes:
+     * 1. PIN-only (auto-detect company) — just send { pin }
+     * 2. PIN + company_id — send { company_id, pin }
      */
     public function loginPin(Request $request): JsonResponse
     {
         $request->validate([
-            'company_id' => 'required|integer',
+            'company_id' => 'nullable|integer',
             'pin' => 'required|string|min:4|max:8',
         ]);
 
-        $result = PinService::loginWithPin(
-            companyId: $request->input('company_id'),
-            pin: $request->input('pin'),
-            request: $request,
-        );
+        $companyId = $request->input('company_id');
+        $pin = $request->input('pin');
+
+        // If company_id provided, use scoped lookup; otherwise auto-detect
+        if ($companyId) {
+            $result = PinService::loginWithPin(
+                companyId: (int) $companyId,
+                pin: $pin,
+                request: $request,
+            );
+        } else {
+            $result = PinService::loginWithPinOnly(
+                pin: $pin,
+                request: $request,
+            );
+        }
 
         if (! $result) {
-            return ApiResponse::unauthenticated('Invalid PIN or access denied');
+            return ApiResponse::unauthenticated('PIN tidak valid atau akses ditolak');
         }
 
         $cookie = SessionService::makeRefreshCookie($result['refresh_token']);

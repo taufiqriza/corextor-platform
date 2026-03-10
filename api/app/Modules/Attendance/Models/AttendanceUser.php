@@ -10,10 +10,10 @@ class AttendanceUser extends Model
 
     protected $fillable = [
         'platform_user_id', 'company_id', 'branch_id',
-        'pin_hash', 'pin_lookup', 'status',
+        'pin_hash', 'pin_lookup', 'global_pin_lookup', 'status',
     ];
 
-    protected $hidden = ['pin_hash', 'pin_lookup'];
+    protected $hidden = ['pin_hash', 'pin_lookup', 'global_pin_lookup'];
 
     public function branch()
     {

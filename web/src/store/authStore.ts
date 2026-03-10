@@ -11,7 +11,7 @@ interface AuthState {
     setAuth: (user: AuthUser, token: string) => void;
     clearAuth: () => void;
     login: (email: string, password: string) => Promise<void>;
-    loginWithPin: (companyCode: string, pin: string) => Promise<void>;
+    loginWithPin: (pin: string) => Promise<void>;
     logout: () => Promise<void>;
     fetchMe: () => Promise<void>;
     initialize: () => void;
@@ -45,10 +45,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     },
 
-    loginWithPin: async (companyCode, pin) => {
+    loginWithPin: async (pin: string) => {
         set({ isLoading: true });
         try {
-            const res = await platformApi.loginWithPin(companyCode, pin);
+            const res = await platformApi.loginWithPin(pin);
             get().setAuth(res.data.data.user, res.data.data.token);
         } finally {
             set({ isLoading: false });

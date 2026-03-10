@@ -31,6 +31,15 @@ class PinService
     }
 
     /**
+     * Generate a global lookup hash for PIN-only login (no company context).
+     * Uses just the PIN — requires PINs to be unique across all companies.
+     */
+    public static function generateGlobalPinLookup(string $pin): string
+    {
+        return hash('sha256', 'global:' . $pin);
+    }
+
+    /**
      * Reset PIN for an attendance user.
      */
     public static function resetPin(int $attendanceUserId, int $companyId, string $newPin): AttendanceUser
@@ -40,6 +49,7 @@ class PinService
         $attendanceUser->update([
             'pin_hash' => self::hashPin($newPin),
             'pin_lookup' => self::generatePinLookup($companyId, $newPin),
+            'global_pin_lookup' => self::generateGlobalPinLookup($newPin),
         ]);
 
         AuditService::attendance('attendance_user.pin_reset', [
@@ -50,7 +60,7 @@ class PinService
     }
 
     /**
-     * Authenticate via PIN login.
+     * Authenticate via PIN login (with company context).
      *
      * Flow from login_flow.md:
      * 1. Lookup attendance_user by company_id + pin_lookup
@@ -76,6 +86,47 @@ class PinService
             return null;
         }
 
+        return self::completePinLogin($attendanceUser, $companyId, $pin, $request);
+    }
+
+    /**
+     * Authenticate via PIN only (auto-detect company).
+     *
+     * Uses global_pin_lookup (sha256 of just the PIN) to find the
+     * attendance user without needing a company code.
+     * Like mbanking — just enter PIN, system finds you.
+     */
+    public static function loginWithPinOnly(
+        string $pin,
+        Request $request,
+    ): ?array {
+        // 1. Find attendance user via global_pin_lookup
+        $globalLookup = self::generateGlobalPinLookup($pin);
+        $attendanceUser = AttendanceUser::where('global_pin_lookup', $globalLookup)
+            ->where('status', 'active')
+            ->first();
+
+        if (! $attendanceUser) {
+            return null;
+        }
+
+        return self::completePinLogin(
+            $attendanceUser,
+            $attendanceUser->company_id,
+            $pin,
+            $request,
+        );
+    }
+
+    /**
+     * Complete PIN login after attendance user is resolved.
+     */
+    private static function completePinLogin(
+        AttendanceUser $attendanceUser,
+        int $companyId,
+        string $pin,
+        Request $request,
+    ): ?array {
         // 2. Verify PIN hash
         if (! Hash::check($pin, $attendanceUser->pin_hash)) {
             AuditService::attendance('auth.pin_login_failed', [
@@ -160,6 +211,7 @@ class PinService
             'user' => [
                 'id' => $platformUser->id,
                 'name' => $platformUser->name,
+                'email' => $platformUser->email ?? '',
                 'role' => $role,
                 'current_company_id' => $companyId,
                 'active_products' => $activeProducts,

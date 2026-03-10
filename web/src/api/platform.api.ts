@@ -6,9 +6,9 @@ export const platformApi = {
     login: (email: string, password: string) =>
         api.post<LoginResponse>('/platform/v1/auth/login/email', { email, password }),
 
-    // Auth — Employee (company code + PIN)
-    loginWithPin: (company_code: string, pin: string) =>
-        api.post<LoginResponse>('/platform/v1/auth/login/pin', { company_code, pin }),
+    // Auth — Employee (PIN-only, auto-detect company)
+    loginWithPin: (pin: string) =>
+        api.post<LoginResponse>('/attendance/v1/auth/login/pin', { pin }),
 
     me: () => api.get<MeResponse>('/platform/v1/me'),
 
