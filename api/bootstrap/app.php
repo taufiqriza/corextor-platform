@@ -4,6 +4,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Http\Request;
 use App\Exceptions\Handler as AppExceptionHandler;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -32,4 +35,20 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         AppExceptionHandler::register($exceptions);
-    })->create();
+    })
+    ->booted(function () {
+        // Rate limiters for auth endpoints
+        RateLimiter::for('login', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
+
+        RateLimiter::for('pin-login', function (Request $request) {
+            return Limit::perMinute(10)->by($request->ip() . ':' . $request->input('company_id'));
+        });
+
+        RateLimiter::for('api-general', function (Request $request) {
+            return Limit::perMinute(60)->by($request->bearerToken() ?: $request->ip());
+        });
+    })
+    ->create();
+

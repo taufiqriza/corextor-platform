@@ -18,12 +18,14 @@ Route::prefix('platform/v1')->group(function () {
     // ── Health ──
     Route::get('/health', [HealthController::class, 'index']);
 
-    // ── Auth (public) ──
-    Route::post('/auth/login/email', [AuthController::class, 'loginEmail']);
-    Route::post('/auth/refresh', [AuthController::class, 'refresh']);
+    // ── Auth (public + rate limited) ──
+    Route::middleware('throttle:login')->group(function () {
+        Route::post('/auth/login/email', [AuthController::class, 'loginEmail']);
+        Route::post('/auth/refresh', [AuthController::class, 'refresh']);
+    });
 
-    // ── Authenticated routes ──
-    Route::middleware('jwt.auth')->group(function () {
+    // ── Authenticated routes (rate limited) ──
+    Route::middleware(['jwt.auth', 'throttle:api-general'])->group(function () {
 
         // Auth
         Route::post('/auth/logout', [AuthController::class, 'logout']);

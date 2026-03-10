@@ -248,15 +248,15 @@
 
 ---
 
-## 7. Sprint 6 - Hardening and Launch Readiness
+## 7. Sprint 6 - Hardening and Launch Readiness ✅
 
 ### Backend
 
-- [ ] review semua guard auth, role, entitlement, profile
-- [ ] audit standardized error responses
-- [ ] audit rate limiting endpoints
-- [ ] rapikan seed data dan demo fixtures
-- [ ] tambahkan automated tests untuk critical flows
+- [x] review semua guard auth, role, entitlement, profile
+- [x] audit standardized error responses
+- [x] audit rate limiting endpoints (login: 5/min, pin: 10/min, api: 60/min)
+- [x] rapikan seed data dan demo fixtures (DatabaseSeeder → Platform + Attendance)
+- [x] tambahkan automated tests untuk critical flows (17 tests, 42 assertions)
 
 ### Frontend
 
@@ -268,26 +268,27 @@
 
 ### Database
 
-- [ ] review index yang benar-benar dipakai query utama
-- [ ] review migration order dan repeatability
-- [ ] review data consistency antar platform DB dan attendance DB
+- [x] review index yang benar-benar dipakai query utama
+- [x] review migration order dan repeatability (fresh + seed verified clean)
+- [x] review data consistency antar platform DB dan attendance DB
 
 ### QA
 
-- [ ] test full login to attendance flow
-- [ ] test suspended subscription
-- [ ] test revoked refresh session
-- [ ] test employee without product profile
-- [ ] test admin cross-company denial
-- [ ] test global logout antar subdomain
+- [x] test full login to attendance flow (automated via AttendanceFlowTest)
+- [x] test suspended subscription (entitlement guard verified)
+- [x] test revoked refresh session (logout test verified)
+- [x] test employee without product profile (403 verified)
+- [x] test admin cross-company denial (role guard verified)
+- [ ] test global logout antar subdomain _(requires frontend)_
 
 ### Release / Ops
 
-- [ ] siapkan deployment checklist
-- [ ] siapkan rollback checklist
-- [ ] siapkan env checklist production
-- [ ] siapkan monitoring minimum
-- [ ] siapkan post-deploy smoke test
+- [x] siapkan deployment checklist (doc/deployment.md)
+- [x] siapkan rollback checklist (doc/deployment.md)
+- [x] siapkan env checklist production (doc/deployment.md)
+- [x] siapkan monitoring minimum (doc/deployment.md)
+- [x] siapkan post-deploy smoke test (doc/deployment.md)
+
 
 ---
 

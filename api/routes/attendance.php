@@ -14,11 +14,13 @@ use App\Modules\Attendance\Http\Controllers\AttendanceRecordController;
 
 Route::prefix('attendance/v1')->group(function () {
 
-    // ── PIN Login (public) ──
-    Route::post('/auth/login/pin', [AttendancePinAuthController::class, 'loginPin']);
+    // ── PIN Login (public + rate limited) ──
+    Route::middleware('throttle:pin-login')->group(function () {
+        Route::post('/auth/login/pin', [AttendancePinAuthController::class, 'loginPin']);
+    });
 
-    // ── Authenticated + Entitled routes ──
-    Route::middleware(['jwt.auth', 'attendance.entitled'])->group(function () {
+    // ── Authenticated + Entitled routes (rate limited) ──
+    Route::middleware(['jwt.auth', 'attendance.entitled', 'throttle:api-general'])->group(function () {
 
         // ── Branches (admin only) ──
         Route::middleware('role:company_admin,super_admin')->group(function () {
