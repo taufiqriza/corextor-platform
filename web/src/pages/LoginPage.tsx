@@ -2,24 +2,19 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuthStore } from '@/store/authStore';
-import { Lock, Mail, Eye, EyeOff, ArrowRight, Loader2, Hash, Building } from 'lucide-react';
-
-type LoginTab = 'email' | 'pin';
+import { Lock, Mail, Eye, EyeOff, ArrowRight, Loader2, Fingerprint } from 'lucide-react';
 
 export function LoginPage() {
     const { T, isDark } = useTheme();
     const navigate = useNavigate();
     const { login, isLoading } = useAuthStore();
 
-    const [tab, setTab] = useState<LoginTab>('email');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPass, setShowPass] = useState(false);
-    const [companyCode, setCompanyCode] = useState('');
-    const [pin, setPin] = useState('');
     const [error, setError] = useState('');
 
-    const handleEmailLogin = async (e: FormEvent) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError('');
         try {
@@ -30,22 +25,6 @@ export function LoginPage() {
             setError(msg);
         }
     };
-
-    const handlePinLogin = async (e: FormEvent) => {
-        e.preventDefault();
-        setError('PIN login will be connected to attendance kiosk flow.');
-    };
-
-    const tabStyle = (active: boolean) => ({
-        flex: 1, height: 42, borderRadius: 10,
-        background: active ? (isDark ? T.card : '#fff') : 'transparent',
-        border: active ? `1px solid ${T.border}` : '1px solid transparent',
-        color: active ? T.text : T.textMuted,
-        fontSize: 12, fontWeight: active ? 800 : 600 as const,
-        display: 'flex' as const, alignItems: 'center' as const, justifyContent: 'center' as const, gap: 6,
-        boxShadow: active ? T.shadowSm : 'none',
-        transition: 'all .2s ease',
-    });
 
     return (
         <div className="cx-login-grid" style={{ minHeight: '100vh' }}>
@@ -105,24 +84,11 @@ export function LoginPage() {
             }}>
                 <div style={{ maxWidth: 380, width: '100%', margin: '0 auto' }}>
                     <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif", marginBottom: 6 }}>
-                        Selamat Datang
+                        Admin Login
                     </h2>
-                    <p style={{ fontSize: 13, color: T.textMuted, marginBottom: 24 }}>
+                    <p style={{ fontSize: 13, color: T.textMuted, marginBottom: 28 }}>
                         Masuk ke dashboard untuk mengelola platform.
                     </p>
-
-                    {/* Tab switcher */}
-                    <div style={{
-                        display: 'flex', gap: 4, padding: 4, borderRadius: 12,
-                        background: isDark ? T.surface : '#F1F5F9', marginBottom: 24,
-                    }}>
-                        <button onClick={() => { setTab('email'); setError(''); }} style={tabStyle(tab === 'email')}>
-                            <Mail size={13} /> Email
-                        </button>
-                        <button onClick={() => { setTab('pin'); setError(''); }} style={tabStyle(tab === 'pin')}>
-                            <Hash size={13} /> PIN Karyawan
-                        </button>
-                    </div>
 
                     {error && (
                         <div style={{
@@ -134,83 +100,72 @@ export function LoginPage() {
                         </div>
                     )}
 
-                    {tab === 'email' ? (
-                        <form onSubmit={handleEmailLogin}>
-                            <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Email</label>
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: 10,
-                                background: isDark ? T.card : '#fff', border: `1px solid ${T.border}`,
-                                borderRadius: 12, padding: '0 14px', marginBottom: 18,
-                            }}>
-                                <Mail size={15} color={T.textMuted} />
-                                <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                                    placeholder="admin@example.com" required autoFocus
-                                    style={{ flex: 1, height: 46, fontSize: 13, color: T.text }} />
-                            </div>
+                    <form onSubmit={handleSubmit}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Email</label>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            background: isDark ? T.card : '#fff', border: `1px solid ${T.border}`,
+                            borderRadius: 12, padding: '0 14px', marginBottom: 18,
+                        }}>
+                            <Mail size={15} color={T.textMuted} />
+                            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                                placeholder="admin@example.com" required autoFocus
+                                style={{ flex: 1, height: 46, fontSize: 13, color: T.text }} />
+                        </div>
 
-                            <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Password</label>
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: 10,
-                                background: isDark ? T.card : '#fff', border: `1px solid ${T.border}`,
-                                borderRadius: 12, padding: '0 14px', marginBottom: 28,
-                            }}>
-                                <Lock size={15} color={T.textMuted} />
-                                <input type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
-                                    placeholder="••••••••" required
-                                    style={{ flex: 1, height: 46, fontSize: 13, color: T.text }} />
-                                <button type="button" onClick={() => setShowPass(p => !p)} style={{ color: T.textMuted }}>
-                                    {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-                                </button>
-                            </div>
-
-                            <button type="submit" disabled={isLoading} style={{
-                                width: '100%', height: 48, borderRadius: 12,
-                                background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
-                                color: '#fff', fontSize: 14, fontWeight: 800,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                                boxShadow: '0 6px 24px rgba(59,130,246,.35)',
-                                transition: 'all .2s ease', opacity: isLoading ? .7 : 1,
-                            }}>
-                                {isLoading ? <Loader2 size={16} className="cx-spin" /> : <>Masuk <ArrowRight size={15} /></>}
+                        <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Password</label>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            background: isDark ? T.card : '#fff', border: `1px solid ${T.border}`,
+                            borderRadius: 12, padding: '0 14px', marginBottom: 28,
+                        }}>
+                            <Lock size={15} color={T.textMuted} />
+                            <input type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                                placeholder="••••••••" required
+                                style={{ flex: 1, height: 46, fontSize: 13, color: T.text }} />
+                            <button type="button" onClick={() => setShowPass(p => !p)} style={{ color: T.textMuted }}>
+                                {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                             </button>
-                        </form>
-                    ) : (
-                        <form onSubmit={handlePinLogin}>
-                            <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Kode Perusahaan</label>
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: 10,
-                                background: isDark ? T.card : '#fff', border: `1px solid ${T.border}`,
-                                borderRadius: 12, padding: '0 14px', marginBottom: 18,
-                            }}>
-                                <Building size={15} color={T.textMuted} />
-                                <input type="text" value={companyCode} onChange={e => setCompanyCode(e.target.value.toUpperCase())}
-                                    placeholder="DEMO" required autoFocus
-                                    style={{ flex: 1, height: 46, fontSize: 13, color: T.text, textTransform: 'uppercase', letterSpacing: 2 }} />
-                            </div>
+                        </div>
 
-                            <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>PIN</label>
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: 10,
-                                background: isDark ? T.card : '#fff', border: `1px solid ${T.border}`,
-                                borderRadius: 12, padding: '0 14px', marginBottom: 28,
-                            }}>
-                                <Hash size={15} color={T.textMuted} />
-                                <input type="password" value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                    placeholder="••••" required inputMode="numeric" maxLength={6}
-                                    style={{ flex: 1, height: 46, fontSize: 18, color: T.text, letterSpacing: 8, fontWeight: 700 }} />
-                            </div>
+                        <button type="submit" disabled={isLoading} style={{
+                            width: '100%', height: 48, borderRadius: 12,
+                            background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                            color: '#fff', fontSize: 14, fontWeight: 800,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                            boxShadow: '0 6px 24px rgba(59,130,246,.35)',
+                            transition: 'all .2s ease', opacity: isLoading ? .7 : 1,
+                        }}>
+                            {isLoading ? <Loader2 size={16} className="cx-spin" /> : <>Masuk <ArrowRight size={15} /></>}
+                        </button>
+                    </form>
 
-                            <button type="submit" style={{
-                                width: '100%', height: 48, borderRadius: 12,
-                                background: 'linear-gradient(135deg, #22C55E, #16A34A)',
-                                color: '#fff', fontSize: 14, fontWeight: 800,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                                boxShadow: '0 6px 24px rgba(34,197,94,.35)',
-                            }}>
-                                Masuk dengan PIN <ArrowRight size={15} />
-                            </button>
-                        </form>
-                    )}
+                    {/* Employee PIN login link */}
+                    <div style={{
+                        marginTop: 24, padding: '14px 16px', borderRadius: 14,
+                        background: isDark ? T.surface : '#F1F5F9',
+                        border: `1px solid ${T.border}`,
+                        display: 'flex', alignItems: 'center', gap: 12,
+                    }}>
+                        <div style={{
+                            width: 38, height: 38, borderRadius: 11,
+                            background: 'linear-gradient(135deg, #22C55E, #16A34A)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                        }}>
+                            <Fingerprint size={18} color="#fff" strokeWidth={1.5} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 12, fontWeight: 800, color: T.text }}>Karyawan?</div>
+                            <div style={{ fontSize: 10, color: T.textMuted, marginTop: 1 }}>Masuk dengan PIN untuk absensi</div>
+                        </div>
+                        <button onClick={() => navigate('/pin')} style={{
+                            height: 32, padding: '0 14px', borderRadius: 9,
+                            background: `${T.primary}12`, border: `1px solid ${T.primary}35`,
+                            color: T.primary, fontSize: 11, fontWeight: 800,
+                        }}>
+                            PIN Login
+                        </button>
+                    </div>
 
                     <p style={{ fontSize: 11, color: T.textMuted, textAlign: 'center', marginTop: 24 }}>
                         Corextor Platform v1.0.0

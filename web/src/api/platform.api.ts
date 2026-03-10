@@ -2,9 +2,13 @@ import { api } from './client';
 import type { LoginResponse, MeResponse } from '@/types/auth.types';
 
 export const platformApi = {
-    // Auth
+    // Auth — Admin (email + password)
     login: (email: string, password: string) =>
         api.post<LoginResponse>('/platform/v1/auth/login/email', { email, password }),
+
+    // Auth — Employee (company code + PIN)
+    loginWithPin: (company_code: string, pin: string) =>
+        api.post<LoginResponse>('/platform/v1/auth/login/pin', { company_code, pin }),
 
     me: () => api.get<MeResponse>('/platform/v1/me'),
 
@@ -59,7 +63,7 @@ export const attendanceApi = {
     resetPin: (id: number, pin: string) =>
         api.post(`/attendance/v1/users/${id}/reset-pin`, { pin }),
 
-    // Attendance operations
+    // Employee operations
     checkIn: () => api.post('/attendance/v1/attendance/check-in'),
     checkOut: () => api.post('/attendance/v1/attendance/check-out'),
     getHistory: (params?: { from?: string; to?: string }) =>

@@ -4,13 +4,13 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { useAuthStore } from '@/store/authStore';
 import { AuthGuard, GuestGuard } from '@/guards/AuthGuard';
 import { LoginPage } from '@/pages/LoginPage';
+import { PinLoginPage } from '@/pages/PinLoginPage';
 import { AdminLayout } from '@/admin/layouts/AdminLayout';
 import { EmployeeLayout } from '@/employee/layouts/EmployeeLayout';
 
 /**
  * Role-based redirect component.
- * super_admin / company_admin → /admin
- * employee (or any other role) → /employee
+ * Dispatches to the appropriate portal based on user role.
  */
 function RoleRedirect() {
   const user = useAuthStore(s => s.user);
@@ -29,9 +29,15 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* Guest routes */}
       <Route path="/login" element={<GuestGuard><LoginPage /></GuestGuard>} />
+      <Route path="/pin" element={<GuestGuard><PinLoginPage /></GuestGuard>} />
+
+      {/* Protected routes */}
       <Route path="/admin" element={<AuthGuard><AdminLayout /></AuthGuard>} />
       <Route path="/employee" element={<AuthGuard><EmployeeLayout /></AuthGuard>} />
+
+      {/* Fallback — redirect to correct portal based on role */}
       <Route path="*" element={<AuthGuard><RoleRedirect /></AuthGuard>} />
     </Routes>
   );
