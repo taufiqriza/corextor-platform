@@ -16,7 +16,7 @@ class SubscriptionService
     public static function listByCompany(int $companyId): Collection
     {
         return CompanySubscription::where('company_id', $companyId)
-            ->with('items')
+            ->with(['items', 'product', 'plan'])
             ->orderByDesc('created_at')
             ->get();
     }

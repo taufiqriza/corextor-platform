@@ -80,6 +80,14 @@ export function CompanyPanel({ T, isDesktop }: Props) {
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState('');
 
+    // Add Subscription modal
+    const [showAddSubModal, setShowAddSubModal] = useState(false);
+    const [plans, setPlans] = useState<{ id: number; name: string; code: string; price: number; billing_cycle: string; product?: { name: string; code: string } }[]>([]);
+    const [plansLoading, setPlansLoading] = useState(false);
+    const [selectedPlanCode, setSelectedPlanCode] = useState('');
+    const [addingSubscription, setAddingSubscription] = useState(false);
+    const [addSubError, setAddSubError] = useState('');
+
     // Feedback
     const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; msg: string } | null>(null);
 
@@ -157,6 +165,44 @@ export function CompanyPanel({ T, isDesktop }: Props) {
         } catch (err) {
             setCreateError(getErrorMsg(err));
         } finally { setCreating(false); }
+    };
+
+    /* ── Add Subscription ── */
+    const openAddSubModal = async () => {
+        setShowAddSubModal(true);
+        setAddSubError('');
+        setSelectedPlanCode('');
+        if (plans.length === 0) {
+            setPlansLoading(true);
+            try {
+                const res = await platformApi.getPlans();
+                setPlans(res.data?.data ?? []);
+            } catch { setPlans([]); }
+            finally { setPlansLoading(false); }
+        }
+    };
+
+    const handleAddSubscription = async () => {
+        if (!selectedPlanCode || !selected) return;
+        const plan = plans.find(p => p.code === selectedPlanCode);
+        if (!plan) return;
+
+        setAddingSubscription(true);
+        setAddSubError('');
+        try {
+            await platformApi.addSubscription(selected.id, {
+                product_code: plan.product?.code ?? 'attendance',
+                plan_code: plan.code,
+                starts_at: new Date().toISOString().split('T')[0],
+            });
+            setShowAddSubModal(false);
+            setFeedback({ kind: 'success', msg: 'Subscription berhasil ditambahkan!' });
+            // Reload subs
+            const res = await platformApi.getCompanySubscriptions(selected.id);
+            setSubs(res.data?.data ?? []);
+        } catch (err) {
+            setAddSubError(getErrorMsg(err));
+        } finally { setAddingSubscription(false); }
     };
 
     /* ═══ Styles ═══ */
@@ -441,6 +487,9 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                                 <div style={{ ...s.sectionIcon, background: `${T.success}16`, color: T.success }}><Package size={14} /></div>
                                 <span style={s.sectionTitle}>Subscriptions</span>
                             </div>
+                            <button onClick={openAddSubModal} style={s.primaryBtn}>
+                                <Plus size={13} /> Tambah
+                            </button>
                         </div>
                         {subsLoading ? (
                             <div style={{ padding: 28, textAlign: 'center', color: T.textMuted, fontSize: 12 }}>
@@ -448,7 +497,12 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                                 Memuat subscriptions...
                             </div>
                         ) : subs.length === 0 ? (
-                            <div style={{ padding: 28, textAlign: 'center', color: T.textMuted, fontSize: 12 }}>Belum ada subscription.</div>
+                            <div style={{ padding: 28, textAlign: 'center', color: T.textMuted, fontSize: 12 }}>
+                                <div style={{ width: 44, height: 44, borderRadius: 14, background: `${T.success}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
+                                    <Package size={20} color={T.textMuted} />
+                                </div>
+                                Belum ada subscription. Klik "Tambah" untuk menambahkan.
+                            </div>
                         ) : (
                             <div style={{ display: 'grid', gap: 10 }}>
                                 {subs.map(sub => (
@@ -478,6 +532,91 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                                     </div>
                                 ))}
                             </div>
+                        )}
+
+                        {/* ── Add Subscription Modal ── */}
+                        {showAddSubModal && (
+                            <>
+                                <div onClick={() => setShowAddSubModal(false)} style={s.overlay} />
+                                <div style={s.modalFrame}>
+                                    <div style={s.modalDialog(520)} onClick={e => e.stopPropagation()}>
+                                        <div style={s.modalHeader}>
+                                            <div>
+                                                <div style={{ fontSize: 15, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif" }}>
+                                                    Tambah Subscription
+                                                </div>
+                                                <div style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}>
+                                                    Pilih plan untuk {selected?.name}
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setShowAddSubModal(false)} style={s.modalClose}><X size={14} /></button>
+                                        </div>
+                                        <div style={s.modalBody}>
+                                            {addSubError && (
+                                                <div style={{ padding: '10px 14px', borderRadius: 12, background: `${T.danger}12`, border: `1px solid ${T.danger}30`, color: T.danger, fontSize: 12, fontWeight: 600 }}>
+                                                    {addSubError}
+                                                </div>
+                                            )}
+                                            {plansLoading ? (
+                                                <div style={{ padding: 20, textAlign: 'center', color: T.textMuted, fontSize: 12 }}>
+                                                    <Loader2 size={18} color={T.primary} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px', display: 'block' }} />
+                                                    Memuat plans...
+                                                </div>
+                                            ) : plans.length === 0 ? (
+                                                <div style={{ padding: 20, textAlign: 'center', color: T.textMuted, fontSize: 12 }}>
+                                                    Tidak ada plan tersedia.
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'grid', gap: 8 }}>
+                                                    {plans.map(plan => {
+                                                        const isSelected = selectedPlanCode === plan.code;
+                                                        return (
+                                                            <button key={plan.id}
+                                                                onClick={() => setSelectedPlanCode(plan.code)}
+                                                                style={{
+                                                                    padding: 14, borderRadius: 14, textAlign: 'left',
+                                                                    background: isSelected ? `${T.primary}10` : T.bgAlt,
+                                                                    border: `2px solid ${isSelected ? T.primary : T.border}`,
+                                                                    cursor: 'pointer', transition: 'all .15s ease',
+                                                                    display: 'flex', alignItems: 'center', gap: 12,
+                                                                }}>
+                                                                <div style={{
+                                                                    width: 20, height: 20, borderRadius: '50%',
+                                                                    border: `2px solid ${isSelected ? T.primary : T.border}`,
+                                                                    background: isSelected ? T.primary : 'transparent',
+                                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                    flexShrink: 0,
+                                                                }}>
+                                                                    {isSelected && <CheckCircle2 size={12} color="#fff" />}
+                                                                </div>
+                                                                <div style={{ flex: 1 }}>
+                                                                    <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{plan.name}</div>
+                                                                    <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
+                                                                        {plan.product?.name ?? 'Attendance'} • {plan.billing_cycle}
+                                                                    </div>
+                                                                </div>
+                                                                <div style={{ fontSize: 14, fontWeight: 900, color: T.primary }}>
+                                                                    {currencyFmt.format(plan.price)}
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: `1px solid ${T.border}`, paddingTop: 14 }}>
+                                                <button onClick={() => setShowAddSubModal(false)} style={{ height: 38, borderRadius: 11, border: `1px solid ${T.border}`, background: T.bgAlt, color: T.textSub, fontSize: 12, fontWeight: 700, padding: '0 14px' }}>
+                                                    Batal
+                                                </button>
+                                                <button onClick={handleAddSubscription} disabled={!selectedPlanCode || addingSubscription}
+                                                    style={{ ...s.primaryBtn, height: 38, opacity: (!selectedPlanCode || addingSubscription) ? .5 : 1 }}>
+                                                    {addingSubscription ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={13} />}
+                                                    {addingSubscription ? 'Menyimpan...' : 'Tambah Subscription'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
                 )}

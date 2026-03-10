@@ -43,7 +43,7 @@ const NAV_GROUPS: NavGroup[] = [
         label: 'Platform',
         items: [
             { key: 'companies', label: 'Companies', icon: Building2 },
-            { key: 'subscriptions', label: 'Subscriptions', icon: Package },
+            { key: 'subscriptions', label: 'Products', icon: Package },
             { key: 'invoices', label: 'Invoices', icon: Receipt },
         ],
     },
@@ -66,7 +66,7 @@ const NAV_GROUPS: NavGroup[] = [
 const SECTION_META: Record<AdminNavKey, { title: string; subtitle: string }> = {
     dashboard: { title: 'Dashboard', subtitle: 'Ringkasan operasional platform.' },
     companies: { title: 'Companies', subtitle: 'Kelola tenant dan organisasi.' },
-    subscriptions: { title: 'Subscriptions', subtitle: 'Kelola langganan produk.' },
+    subscriptions: { title: 'Product Overview', subtitle: 'Ringkasan produk dan subscriber.' },
     invoices: { title: 'Invoices', subtitle: 'Riwayat tagihan dan pembayaran.' },
     branches: { title: 'Branches', subtitle: 'Kelola cabang perusahaan.' },
     'att-users': { title: 'Attendance Users', subtitle: 'Kelola profil absensi karyawan.' },

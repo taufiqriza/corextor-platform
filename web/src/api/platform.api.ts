@@ -31,7 +31,7 @@ export const platformApi = {
     getCompanySubscriptions: (companyId: number) =>
         api.get(`/platform/v1/companies/${companyId}/subscriptions`),
 
-    addSubscription: (companyId: number, data: { plan_id: number }) =>
+    addSubscription: (companyId: number, data: { product_code: string; plan_code: string; starts_at: string }) =>
         api.post(`/platform/v1/companies/${companyId}/subscriptions`, data),
 
     getMySubscriptions: () =>
@@ -39,6 +39,7 @@ export const platformApi = {
 
     // Products
     getProducts: () => api.get('/platform/v1/products'),
+    getProductOverview: () => api.get('/platform/v1/products/overview'),
     getPlans: () => api.get('/platform/v1/plans'),
 
     // Invoices

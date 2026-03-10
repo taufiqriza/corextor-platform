@@ -48,6 +48,7 @@ Route::prefix('platform/v1')->group(function () {
 
             // Product Catalog
             Route::get('/products', [SubscriptionController::class, 'products']);
+            Route::get('/products/overview', [SubscriptionController::class, 'productOverview']);
             Route::get('/plans', [SubscriptionController::class, 'plans']);
             Route::get('/bundles', [SubscriptionController::class, 'bundles']);
 

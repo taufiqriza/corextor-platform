@@ -81,4 +81,42 @@ class SubscriptionController extends Controller
     {
         return ApiResponse::success(Bundle::active()->with('items')->get());
     }
+
+    /**
+     * GET /platform/v1/products/overview
+     * Returns products with subscriber stats for quick dashboard view.
+     */
+    public function productOverview(): JsonResponse
+    {
+        $products = Product::active()->with('plans')->get();
+
+        $overview = $products->map(function ($product) {
+            $subs = \App\Modules\Platform\Subscription\CompanySubscription::where('product_id', $product->id)->get();
+            $activeSubs = $subs->filter(fn ($s) => in_array($s->status, ['active', 'trial']));
+
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'code' => $product->code,
+                'description' => $product->description,
+                'status' => $product->status,
+                'plans' => $product->plans->map(fn ($plan) => [
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'code' => $plan->code,
+                    'price' => $plan->price,
+                    'billing_cycle' => $plan->billing_cycle,
+                ]),
+                'stats' => [
+                    'total_subscribers' => $subs->count(),
+                    'active_subscribers' => $activeSubs->count(),
+                    'total_revenue' => $activeSubs->sum(function ($s) {
+                        return $s->plan?->price ?? 0;
+                    }),
+                ],
+            ];
+        });
+
+        return ApiResponse::success($overview);
+    }
 }

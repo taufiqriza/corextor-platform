@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Modules\Platform\Company\Company;
+use App\Modules\Platform\ProductCatalog\Product;
+use App\Modules\Platform\ProductCatalog\Plan;
 
 class CompanySubscription extends Model
 {
@@ -28,6 +30,16 @@ class CompanySubscription extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class);
     }
 
     public function items(): HasMany
