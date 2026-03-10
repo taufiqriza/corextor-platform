@@ -24,6 +24,9 @@ export const platformApi = {
     getCompany: (id: number) =>
         api.get(`/platform/v1/companies/${id}`),
 
+    getCompanyMembers: (companyId: number) =>
+        api.get(`/platform/v1/companies/${companyId}/members`),
+
     // Subscriptions
     getCompanySubscriptions: (companyId: number) =>
         api.get(`/platform/v1/companies/${companyId}/subscriptions`),

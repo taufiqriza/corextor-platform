@@ -40,6 +40,7 @@ Route::prefix('platform/v1')->group(function () {
             Route::get('/companies/{id}', [CompanyController::class, 'show']);
             Route::put('/companies/{id}', [CompanyController::class, 'update']);
             Route::get('/companies/{id}/admins', [CompanyController::class, 'admins']);
+            Route::get('/companies/{id}/members', [CompanyController::class, 'members']);
 
             // Company Subscriptions (super admin managing)
             Route::get('/companies/{id}/subscriptions', [SubscriptionController::class, 'index']);

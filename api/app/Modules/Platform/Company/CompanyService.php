@@ -74,4 +74,15 @@ class CompanyService
             ->with('user')
             ->get();
     }
+
+    /**
+     * Get all members for a specific company.
+     */
+    public static function getMembers(int $companyId): \Illuminate\Database\Eloquent\Collection
+    {
+        return CompanyMembership::where('company_id', $companyId)
+            ->with('user')
+            ->orderByRaw("FIELD(role, 'company_admin', 'employee')")
+            ->get();
+    }
 }

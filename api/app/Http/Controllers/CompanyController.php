@@ -72,4 +72,26 @@ class CompanyController extends Controller
 
         return ApiResponse::success($result);
     }
+
+    /**
+     * GET /platform/v1/companies/{id}/members
+     */
+    public function members(int $id): JsonResponse
+    {
+        $members = CompanyService::getMembers($id);
+
+        $result = $members->map(fn ($m) => [
+            'id' => $m->id,
+            'user_id' => $m->user_id,
+            'role' => $m->role,
+            'status' => $m->status,
+            'user' => $m->user ? [
+                'id' => $m->user->id,
+                'name' => $m->user->name,
+                'email' => $m->user->email,
+            ] : null,
+        ]);
+
+        return ApiResponse::success($result);
+    }
 }
