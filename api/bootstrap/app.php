@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'jwt.auth' => \App\Http\Middleware\JwtAuth::class,
             'role' => \App\Http\Middleware\CheckRole::class,
+            'attendance.entitled' => \App\Http\Middleware\AttendanceEntitlement::class,
         ]);
 
         $middleware->statefulApi();

@@ -1,6 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Modules\Attendance\Http\Controllers\AttendancePinAuthController;
+use App\Modules\Attendance\Http\Controllers\BranchController;
+use App\Modules\Attendance\Http\Controllers\AttendanceUserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -8,36 +11,44 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 |
 | Routes under /attendance/v1 namespace.
-| These handle attendance-specific business logic: branches, attendance
-| users, PIN login, check-in/out, reports.
-|
-| All routes in this file will require:
-| 1. Access token auth
-| 2. Company membership validation
-| 3. Active subscription check for product "attendance"
-| 4. Attendance profile validation (when applicable)
+| All authenticated routes require:
+| 1. JWT auth (jwt.auth)
+| 2. Active attendance subscription (attendance.entitled)
 |
 */
 
 Route::prefix('attendance/v1')->group(function () {
 
-    // ── Auth — PIN login (Sprint 4) ──
-    // Route::post('/auth/login/pin', ...);
+    // ── PIN Login (public — no JWT needed) ──
+    Route::post('/auth/login/pin', [AttendancePinAuthController::class, 'loginPin']);
 
-    // ── Branches (Sprint 4) ──
-    // Route::apiResource('branches', ...);
+    // ── Authenticated + Entitled routes ──
+    Route::middleware(['jwt.auth', 'attendance.entitled'])->group(function () {
 
-    // ── Attendance Users (Sprint 4) ──
-    // Route::apiResource('users', ...);
-    // Route::post('/users/{id}/reset-pin', ...);
+        // ── Branches (company_admin) ──
+        Route::middleware('role:company_admin,super_admin')->group(function () {
+            Route::get('/branches', [BranchController::class, 'index']);
+            Route::post('/branches', [BranchController::class, 'store']);
+            Route::get('/branches/{id}', [BranchController::class, 'show']);
+            Route::put('/branches/{id}', [BranchController::class, 'update']);
+            Route::delete('/branches/{id}', [BranchController::class, 'destroy']);
+        });
 
-    // ── Attendance Records (Sprint 5) ──
-    // Route::post('/attendance/check-in', ...);
-    // Route::post('/attendance/check-out', ...);
-    // Route::get('/attendance/history', ...);
-    // Route::get('/attendance/report', ...);
-    // Route::put('/attendance/{id}/correct', ...);
+        // ── Attendance Users (company_admin) ──
+        Route::middleware('role:company_admin,super_admin')->group(function () {
+            Route::get('/users', [AttendanceUserController::class, 'index']);
+            Route::post('/users', [AttendanceUserController::class, 'store']);
+            Route::get('/users/{id}', [AttendanceUserController::class, 'show']);
+            Route::put('/users/{id}', [AttendanceUserController::class, 'update']);
+            Route::delete('/users/{id}', [AttendanceUserController::class, 'destroy']);
+            Route::post('/users/{id}/reset-pin', [AttendanceUserController::class, 'resetPin']);
+        });
 
-    // ── Logs (Sprint 5) ──
-    // Route::get('/logs', ...);
+        // ── Attendance Records (Sprint 5) ──
+        // Route::post('/attendance/check-in', ...);
+        // Route::post('/attendance/check-out', ...);
+        // Route::get('/attendance/history', ...);
+        // Route::get('/attendance/report', ...);
+        // Route::put('/attendance/{id}/correct', ...);
+    });
 });
