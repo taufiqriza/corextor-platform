@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Building2, ChevronDown, ClipboardList,
     LayoutDashboard, LogOut, MapPin, Menu, Moon, Package, Receipt,
-    Sun, UserCircle, Users, X,
+    Settings, Sun, UserCircle, Users, X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
@@ -14,6 +14,7 @@ import { InvoicePanel } from '@/admin/panels/InvoicePanel';
 import { BranchPanel } from '@/admin/panels/BranchPanel';
 import { AttendanceUserPanel } from '@/admin/panels/AttendanceUserPanel';
 import { AttendanceReportPanel } from '@/admin/panels/AttendanceReportPanel';
+import { SettingsPanel } from '@/admin/panels/SettingsPanel';
 
 function useIsDesktop() {
     const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
@@ -52,6 +53,12 @@ const NAV_GROUPS: NavGroup[] = [
             { key: 'branches', label: 'Branches', icon: MapPin },
             { key: 'att-users', label: 'Users', icon: Users },
             { key: 'att-report', label: 'Report', icon: ClipboardList },
+        ],
+    },
+    {
+        label: 'System',
+        items: [
+            { key: 'settings', label: 'Settings', icon: Settings },
         ],
     },
 ];
@@ -130,6 +137,7 @@ export function AdminLayout() {
             case 'branches': return <BranchPanel T={T} isDesktop={isDesktop} />;
             case 'att-users': return <AttendanceUserPanel T={T} isDesktop={isDesktop} />;
             case 'att-report': return <AttendanceReportPanel T={T} isDesktop={isDesktop} />;
+            case 'settings': return <SettingsPanel T={T} isDesktop={isDesktop} />;
             default: return <DashboardPanel T={T} isDesktop={isDesktop} />;
         }
     };

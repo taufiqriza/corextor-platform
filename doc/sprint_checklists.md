@@ -223,7 +223,7 @@
 - [ ] buat employee check-in/out page _(deferred — employee portal)_
 - [ ] buat employee history page _(deferred — employee portal)_
 - [x] buat admin attendance report page (AttendanceReportPanel with table/card)
-- [ ] buat attendance correction UI _(deferred — needs modal form)_
+- [x] buat attendance correction UI (modal in AttendanceReportPanel)
 - [x] buat empty state dan error state untuk attendance pages
 
 ### Database
