@@ -59,7 +59,13 @@ export const attendanceApi = {
     resetPin: (id: number, pin: string) =>
         api.post(`/attendance/v1/users/${id}/reset-pin`, { pin }),
 
-    // Attendance
+    // Attendance operations
+    checkIn: () => api.post('/attendance/v1/attendance/check-in'),
+    checkOut: () => api.post('/attendance/v1/attendance/check-out'),
+    getHistory: (params?: { from?: string; to?: string }) =>
+        api.get('/attendance/v1/attendance/history', { params }),
+
+    // Admin report
     getReport: (params?: { from?: string; to?: string; branch_id?: number }) =>
         api.get('/attendance/v1/attendance/report', { params }),
     correctAttendance: (id: number, data: { time_in?: string; time_out?: string; note?: string }) =>
