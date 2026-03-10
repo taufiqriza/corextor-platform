@@ -2,7 +2,7 @@
 
 > Dokumen ini menurunkan `delivery_plan.md` menjadi checklist teknis yang siap dipakai saat eksekusi sprint. Dokumen ini bukan source of truth arsitektur; dokumen ini adalah work breakdown operasional.
 
-**Version:** 3.0.0  
+**Version:** 3.1.0  
 **Last updated:** March 10, 2026
 
 ---
@@ -18,21 +18,21 @@
 
 ---
 
-## 2. Sprint 1 - Platform Foundation
+## 2. Sprint 1 - Platform Foundation ✅
 
 ### Backend
 
-- [ ] bootstrap codebase `api/`
-- [ ] siapkan struktur modular monolith untuk `Platform` dan `Attendance`
-- [ ] pisahkan route file `platform.php` dan `attendance.php`
-- [ ] buat standard API response helper
-- [ ] buat base exception handler untuk API JSON
-- [ ] siapkan logging abstraction untuk audit event
-- [ ] tambahkan health-check endpoint
+- [x] bootstrap codebase `api/`
+- [x] siapkan struktur modular monolith untuk `Platform` dan `Attendance`
+- [x] pisahkan route file `platform.php` dan `attendance.php`
+- [x] buat standard API response helper
+- [x] buat base exception handler untuk API JSON
+- [x] siapkan logging abstraction untuk audit event
+- [x] tambahkan health-check endpoint
 
 ### Frontend
 
-- [ ] bootstrap `web/`
+- [ ] bootstrap `web/` _(deferred — backend-first approach)_
 - [ ] siapkan env config ke `api.corextor.com`
 - [ ] buat axios client base dengan `withCredentials`
 - [ ] buat route shell untuk `login`, `admin`, `employee`
@@ -40,47 +40,47 @@
 
 ### Database
 
-- [ ] siapkan koneksi database `platform`
-- [ ] siapkan koneksi database `attendance`
-- [ ] buat migration `audit_logs` di platform DB
-- [ ] verifikasi strategy migration folder per database
-- [ ] tentukan naming convention migration lintas module
+- [x] siapkan koneksi database `platform`
+- [x] siapkan koneksi database `attendance`
+- [x] buat migration `audit_logs` di platform DB
+- [x] verifikasi strategy migration folder per database
+- [x] tentukan naming convention migration lintas module
 
 ### QA
 
-- [ ] verifikasi backend startable
-- [ ] verifikasi frontend startable
-- [ ] verifikasi environment lokal bisa connect ke dua database
-- [ ] verifikasi health-check response konsisten
-- [ ] verifikasi audit abstraction dapat menulis ke `audit_logs`
+- [x] verifikasi backend startable
+- [ ] verifikasi frontend startable _(deferred)_
+- [x] verifikasi environment lokal bisa connect ke dua database
+- [x] verifikasi health-check response konsisten
+- [x] verifikasi audit abstraction dapat menulis ke `audit_logs`
 
 ### Release / Ops
 
-- [ ] siapkan template `.env.example`
-- [ ] dokumentasikan variable environment minimum
-- [ ] tentukan strategy config untuk local, staging, production
+- [x] siapkan template `.env.example`
+- [x] dokumentasikan variable environment minimum
+- [x] tentukan strategy config untuk local, staging, production
 
 ---
 
-## 3. Sprint 2 - Auth and SSO
+## 3. Sprint 2 - Auth and SSO ✅
 
 ### Backend
 
-- [ ] migration `users`
-- [ ] migration `companies`
-- [ ] migration `company_memberships`
-- [ ] migration `refresh_sessions`
-- [ ] implement email login endpoint
-- [ ] implement refresh endpoint
-- [ ] implement global logout endpoint
-- [ ] implement access token issuer
-- [ ] implement refresh cookie writer/clearer
-- [ ] implement effective role resolver
-- [ ] implement current company resolver
+- [x] migration `users`
+- [x] migration `companies`
+- [x] migration `company_memberships`
+- [x] migration `refresh_sessions`
+- [x] implement email login endpoint
+- [x] implement refresh endpoint
+- [x] implement global logout endpoint
+- [x] implement access token issuer
+- [x] implement refresh cookie writer/clearer
+- [x] implement effective role resolver
+- [x] implement current company resolver
 
 ### Frontend
 
-- [ ] buat login page email flow
+- [ ] buat login page email flow _(deferred — backend-first approach)_
 - [ ] buat bootstrap refresh flow saat app load
 - [ ] buat auth context dengan access token in-memory
 - [ ] buat protected route guard
@@ -89,51 +89,51 @@
 
 ### Database
 
-- [ ] pastikan `companies.code` unique
-- [ ] pastikan index email unique
-- [ ] pastikan `(company_id, user_id)` unique di memberships
-- [ ] pastikan refresh session dapat dicabut tanpa hapus record historis
+- [x] pastikan `companies.code` unique
+- [x] pastikan index email unique
+- [x] pastikan `(company_id, user_id)` unique di memberships
+- [x] pastikan refresh session dapat dicabut tanpa hapus record historis
 
 ### QA
 
-- [ ] test login sukses
-- [ ] test login gagal
-- [ ] test refresh sukses
-- [ ] test refresh session expired
-- [ ] test logout global
-- [ ] test access token tidak pernah disimpan di `localStorage`
+- [x] test login sukses
+- [x] test login gagal
+- [x] test refresh sukses
+- [x] test refresh session expired
+- [x] test logout global
+- [ ] test access token tidak pernah disimpan di `localStorage` _(frontend)_
 
 ### Release / Ops
 
-- [ ] siapkan seed minimal demo company untuk auth dan membership test
-- [ ] pastikan cookie config aman untuk subdomain
-- [ ] review CORS whitelist Corextor domains
-- [ ] review secure cookie requirement pada staging/production
+- [x] siapkan seed minimal demo company untuk auth dan membership test
+- [x] pastikan cookie config aman untuk subdomain
+- [ ] review CORS whitelist Corextor domains _(deferred ke Sprint 6)_
+- [x] review secure cookie requirement pada staging/production
 
 ---
 
-## 4. Sprint 3 - Platform Admin and Commerce
+## 4. Sprint 3 - Platform Admin and Commerce ✅
 
 ### Backend
 
-- [ ] migration `products`
-- [ ] migration `plans`
-- [ ] migration `bundles`
-- [ ] migration `bundle_items`
-- [ ] migration `company_subscriptions`
-- [ ] migration `subscription_items`
-- [ ] migration `invoices`
-- [ ] migration `invoice_items`
-- [ ] implement endpoint companies list/create/detail
-- [ ] implement endpoint company admins summary
-- [ ] implement endpoint company subscriptions
-- [ ] implement endpoint add subscription to company
-- [ ] implement endpoint products/plans/bundles list
-- [ ] implement endpoint invoices list
+- [x] migration `products`
+- [x] migration `plans`
+- [x] migration `bundles`
+- [x] migration `bundle_items`
+- [x] migration `company_subscriptions`
+- [x] migration `subscription_items`
+- [x] migration `invoices`
+- [x] migration `invoice_items`
+- [x] implement endpoint companies list/create/detail
+- [x] implement endpoint company admins summary
+- [x] implement endpoint company subscriptions
+- [x] implement endpoint add subscription to company
+- [x] implement endpoint products/plans/bundles list
+- [x] implement endpoint invoices list
 
 ### Frontend
 
-- [ ] buat shell super admin
+- [ ] buat shell super admin _(deferred — backend-first approach)_
 - [ ] buat company list page
 - [ ] buat company detail page
 - [ ] buat subscription summary view
@@ -142,42 +142,42 @@
 
 ### Database
 
-- [ ] pastikan `products.code` unique
-- [ ] pastikan `plans.code` unique
-- [ ] pastikan invoice number unique
-- [ ] pastikan subscription model bisa represent single product dan bundle
+- [x] pastikan `products.code` unique
+- [x] pastikan `plans.code` unique
+- [x] pastikan invoice number unique
+- [x] pastikan subscription model bisa represent single product dan bundle
 
 ### QA
 
-- [ ] test super admin create company
-- [ ] test add product subscription ke company
-- [ ] test company admin hanya bisa lihat invoice/subscription own company
-- [ ] test inactive subscription tidak dihitung sebagai active product
+- [x] test super admin create company
+- [x] test add product subscription ke company
+- [x] test company admin hanya bisa lihat invoice/subscription own company
+- [x] test inactive subscription tidak dihitung sebagai active product
 
 ### Release / Ops
 
-- [ ] siapkan seed product catalog minimum
-- [ ] siapkan seed attendance plan minimum
-- [ ] siapkan demo company + demo subscription
+- [x] siapkan seed product catalog minimum
+- [x] siapkan seed attendance plan minimum
+- [x] siapkan demo company + demo subscription
 
 ---
 
-## 5. Sprint 4 - Attendance Admin Setup
+## 5. Sprint 4 - Attendance Admin Setup ✅
 
 ### Backend
 
-- [ ] migration `branches`
-- [ ] migration `attendance_users`
-- [ ] implement attendance entitlement guard
-- [ ] implement attendance PIN login endpoint
-- [ ] implement branch CRUD endpoints
-- [ ] implement attendance user list/create/update/delete
-- [ ] implement attendance PIN reset
-- [ ] implement platform user linking dari attendance user flow
+- [x] migration `branches`
+- [x] migration `attendance_users`
+- [x] implement attendance entitlement guard
+- [x] implement attendance PIN login endpoint
+- [x] implement branch CRUD endpoints
+- [x] implement attendance user list/create/update/delete
+- [x] implement attendance PIN reset
+- [x] implement platform user linking dari attendance user flow
 
 ### Frontend
 
-- [ ] buat attendance admin layout
+- [ ] buat attendance admin layout _(deferred — backend-first approach)_
 - [ ] buat branch management page
 - [ ] buat attendance user management page
 - [ ] buat PIN reset action UI
@@ -185,42 +185,42 @@
 
 ### Database
 
-- [ ] pastikan `(company_id, platform_user_id)` unique pada `attendance_users`
-- [ ] pastikan `(company_id, pin_lookup)` unique
-- [ ] pastikan `branches` selalu scoped by `company_id`
+- [x] pastikan `(company_id, platform_user_id)` unique pada `attendance_users`
+- [x] pastikan `(company_id, pin_lookup)` unique
+- [x] pastikan `branches` selalu scoped by `company_id`
 
 ### QA
 
-- [ ] test PIN login sukses
-- [ ] test PIN login gagal
-- [ ] test rate limit PIN login
-- [ ] test employee tanpa `attendance_user` ditolak
-- [ ] test company tanpa subscription attendance ditolak
-- [ ] test branch CRUD own company only
+- [x] test PIN login sukses
+- [x] test PIN login gagal
+- [ ] test rate limit PIN login _(Sprint 6)_
+- [x] test employee tanpa `attendance_user` ditolak
+- [x] test company tanpa subscription attendance ditolak
+- [x] test branch CRUD own company only
 
 ### Release / Ops
 
-- [ ] siapkan seed branch demo
-- [ ] siapkan seed attendance user demo
-- [ ] dokumentasikan flow reset PIN untuk support/admin
+- [x] siapkan seed branch demo
+- [x] siapkan seed attendance user demo
+- [ ] dokumentasikan flow reset PIN untuk support/admin _(Sprint 6)_
 
 ---
 
-## 6. Sprint 5 - Attendance Operations
+## 6. Sprint 5 - Attendance Operations ✅
 
 ### Backend
 
-- [ ] migration `attendance_records`
-- [ ] implement check-in endpoint
-- [ ] implement check-out endpoint
-- [ ] implement history endpoint
-- [ ] implement company report endpoint
-- [ ] implement attendance correction endpoint
-- [ ] implement attendance log query dengan source audit log pusat
+- [x] migration `attendance_records`
+- [x] implement check-in endpoint
+- [x] implement check-out endpoint
+- [x] implement history endpoint
+- [x] implement company report endpoint
+- [x] implement attendance correction endpoint
+- [x] implement attendance log query dengan source audit log pusat
 
 ### Frontend
 
-- [ ] buat employee check-in/out page
+- [ ] buat employee check-in/out page _(deferred — backend-first approach)_
 - [ ] buat employee history page
 - [ ] buat admin attendance report page
 - [ ] buat attendance correction UI
@@ -228,23 +228,23 @@
 
 ### Database
 
-- [ ] pastikan `(attendance_user_id, date)` unique
-- [ ] pastikan index report query `(company_id, branch_id, date)` tersedia
-- [ ] pastikan `platform_user_id` index cukup untuk history lookup
+- [x] pastikan `(attendance_user_id, date)` unique
+- [x] pastikan index report query `(company_id, branch_id, date)` tersedia
+- [x] pastikan `platform_user_id` index cukup untuk history lookup
 
 ### QA
 
-- [ ] test check-in normal
-- [ ] test duplicate check-in conflict
-- [ ] test check-out tanpa check-in
-- [ ] test history hanya menampilkan data company sendiri
-- [ ] test report company scoped benar
-- [ ] test correction tercatat di audit log
+- [x] test check-in normal
+- [x] test duplicate check-in conflict
+- [x] test check-out tanpa check-in
+- [x] test history hanya menampilkan data company sendiri
+- [x] test report company scoped benar
+- [x] test correction tercatat di audit log
 
 ### Release / Ops
 
-- [ ] siapkan demo scenario untuk UAT
-- [ ] siapkan checklist smoke test attendance harian
+- [ ] siapkan demo scenario untuk UAT _(Sprint 6)_
+- [ ] siapkan checklist smoke test attendance harian _(Sprint 6)_
 
 ---
 
@@ -260,7 +260,7 @@
 
 ### Frontend
 
-- [ ] review unauthorized states
+- [ ] review unauthorized states _(deferred ke frontend phase)_
 - [ ] review refresh failure handling
 - [ ] review logout handling
 - [ ] review loading, empty, and error states
@@ -293,8 +293,8 @@
 
 ## 8. Cross-Sprint Watch Items
 
-- [ ] jangan bangun feature phase 2 sebelum sprint 1-6 selesai
-- [ ] jangan tambahkan schema baru ke `database.md` tanpa alasan sprint yang jelas
-- [ ] jangan tambahkan endpoint baru ke `api_spec.md` jika belum masuk sprint aktif
+- [x] jangan bangun feature phase 2 sebelum sprint 1-6 selesai
+- [x] jangan tambahkan schema baru ke `database.md` tanpa alasan sprint yang jelas
+- [x] jangan tambahkan endpoint baru ke `api_spec.md` jika belum masuk sprint aktif
 - [ ] semua perubahan auth harus diuji ulang terhadap SSO lintas subdomain
-- [ ] semua perubahan attendance harus diuji ulang terhadap entitlement company
+- [x] semua perubahan attendance harus diuji ulang terhadap entitlement company
