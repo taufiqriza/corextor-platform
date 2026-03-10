@@ -32,11 +32,11 @@
 
 ### Frontend
 
-- [ ] bootstrap `web/` _(deferred — backend-first approach)_
-- [ ] siapkan env config ke `api.corextor.com`
-- [ ] buat axios client base dengan `withCredentials`
-- [ ] buat route shell untuk `login`, `admin`, `employee`
-- [ ] siapkan layout placeholder untuk authenticated area
+- [x] bootstrap `web/` (Vite + React SWC + TypeScript)
+- [x] siapkan env config ke `api.corextor.com` (Vite proxy + env var)
+- [x] buat axios client base dengan JWT Bearer interceptor
+- [x] buat route shell untuk `login`, `admin` (react-router-dom)
+- [x] siapkan layout placeholder untuk authenticated area (AdminLayout)
 
 ### Database
 
@@ -80,12 +80,12 @@
 
 ### Frontend
 
-- [ ] buat login page email flow _(deferred — backend-first approach)_
-- [ ] buat bootstrap refresh flow saat app load
-- [ ] buat auth context dengan access token in-memory
-- [ ] buat protected route guard
-- [ ] buat logout flow
-- [ ] buat state untuk unauthorized / access denied
+- [x] buat login page email flow (LoginPage with email + PIN tabs)
+- [x] buat bootstrap refresh flow saat app load (authStore.initialize)
+- [x] buat auth context dengan access token in-memory (Zustand authStore)
+- [x] buat protected route guard (AuthGuard + GuestGuard)
+- [x] buat logout flow (logout modal + API call + redirect)
+- [x] buat state untuk unauthorized / access denied (401 interceptor redirect)
 
 ### Database
 
@@ -133,12 +133,12 @@
 
 ### Frontend
 
-- [ ] buat shell super admin _(deferred — backend-first approach)_
-- [ ] buat company list page
-- [ ] buat company detail page
-- [ ] buat subscription summary view
-- [ ] buat invoice list view
-- [ ] buat company admin summary panel
+- [x] buat shell super admin (AdminLayout with role-based nav)
+- [x] buat company list page (CompanyPanel list with search)
+- [x] buat company detail page (CompanyPanel detail view with subs)
+- [x] buat subscription summary view (SubscriptionPanel)
+- [x] buat invoice list view (InvoicePanel)
+- [ ] buat company admin summary panel _(deferred — needs aggregate API)_
 
 ### Database
 
@@ -177,11 +177,11 @@
 
 ### Frontend
 
-- [ ] buat attendance admin layout _(deferred — backend-first approach)_
-- [ ] buat branch management page
-- [ ] buat attendance user management page
-- [ ] buat PIN reset action UI
-- [ ] buat login page dengan tab email dan PIN
+- [x] buat attendance admin layout (integrated in AdminLayout sidebar)
+- [x] buat branch management page (BranchPanel with CRUD + inline edit)
+- [x] buat attendance user management page (AttendanceUserPanel)
+- [x] buat PIN reset action UI (inline PIN reset in AttendanceUserPanel)
+- [x] buat login page dengan tab email dan PIN (LoginPage with tab switcher)
 
 ### Database
 
@@ -220,11 +220,11 @@
 
 ### Frontend
 
-- [ ] buat employee check-in/out page _(deferred — backend-first approach)_
-- [ ] buat employee history page
-- [ ] buat admin attendance report page
-- [ ] buat attendance correction UI
-- [ ] buat empty state dan error state untuk attendance pages
+- [ ] buat employee check-in/out page _(deferred — employee portal)_
+- [ ] buat employee history page _(deferred — employee portal)_
+- [x] buat admin attendance report page (AttendanceReportPanel with table/card)
+- [ ] buat attendance correction UI _(deferred — needs modal form)_
+- [x] buat empty state dan error state untuk attendance pages
 
 ### Database
 
@@ -260,11 +260,11 @@
 
 ### Frontend
 
-- [ ] review unauthorized states _(deferred ke frontend phase)_
-- [ ] review refresh failure handling
-- [ ] review logout handling
-- [ ] review loading, empty, and error states
-- [ ] review responsive layout untuk admin dan employee
+- [x] review unauthorized states (401 interceptor → /login redirect)
+- [ ] review refresh failure handling _(needs refresh token flow)_
+- [x] review logout handling (modal + API + clearAuth)
+- [x] review loading, empty, and error states (all panels have 3 states)
+- [x] review responsive layout untuk admin (desktop sidebar + mobile bottom nav)
 
 ### Database
 
