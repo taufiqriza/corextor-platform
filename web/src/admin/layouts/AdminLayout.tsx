@@ -138,7 +138,7 @@ export function AdminLayout() {
             case 'att-users': return <AttendanceUserPanel T={T} isDesktop={isDesktop} />;
             case 'att-report': return <AttendanceReportPanel T={T} isDesktop={isDesktop} />;
             case 'settings': return <SettingsPanel T={T} isDesktop={isDesktop} />;
-            default: return <DashboardPanel T={T} isDesktop={isDesktop} />;
+            default: return <DashboardPanel T={T} isDesktop={isDesktop} onNavigate={k => setActiveNav(k as AdminNavKey)} />;
         }
     };
 
