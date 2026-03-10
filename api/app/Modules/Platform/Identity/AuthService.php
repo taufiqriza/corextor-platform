@@ -1,0 +1,205 @@
+<?php
+
+namespace App\Modules\Platform\Identity;
+
+use App\Modules\Platform\Company\Company;
+use App\Modules\Platform\Membership\MembershipService;
+use App\Modules\Platform\Session\SessionService;
+use App\Modules\Platform\Audit\AuditService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+
+class AuthService
+{
+    /**
+     * Authenticate user via email + password.
+     *
+     * Returns token data + sets refresh session,
+     * or null if authentication fails.
+     */
+    public static function loginWithEmail(
+        string $email,
+        string $password,
+        Request $request,
+    ): ?array {
+        // 1. Find user
+        $user = User::where('email', $email)->first();
+
+        if (! $user || ! Hash::check($password, $user->password)) {
+            AuditService::platform('auth.login_failed', [
+                'email' => $email,
+                'reason' => 'invalid_credentials',
+            ]);
+            return null;
+        }
+
+        // 2. Check user status
+        if (! $user->isActive()) {
+            AuditService::platform('auth.login_failed', [
+                'email' => $email,
+                'reason' => 'user_inactive',
+            ]);
+            return null;
+        }
+
+        // 3. Resolve company
+        $company = MembershipService::resolveCurrentCompany($user);
+
+        if (! $company && ! $user->isSuperAdmin()) {
+            AuditService::platform('auth.login_failed', [
+                'email' => $email,
+                'reason' => 'no_active_company',
+            ]);
+            return null;
+        }
+
+        // Super admin without any company can still login
+        // but they need a company context for the token
+        if (! $company && $user->isSuperAdmin()) {
+            // Create a minimal context for super admin
+            return self::buildLoginResponse($user, null, $request);
+        }
+
+        return self::buildLoginResponse($user, $company, $request);
+    }
+
+    /**
+     * Refresh an existing session using the refresh token.
+     */
+    public static function refreshSession(string $rawRefreshToken, Request $request): ?array
+    {
+        // 1. Validate refresh token
+        $session = SessionService::validateRefreshToken($rawRefreshToken);
+
+        if (! $session) {
+            return null;
+        }
+
+        $user = $session->user;
+        $company = $session->company;
+
+        // 2. Re-validate user and company status
+        if (! $user->isActive()) {
+            SessionService::revokeSession($session->id);
+            return null;
+        }
+
+        if (! $company->isActive()) {
+            SessionService::revokeSession($session->id);
+            return null;
+        }
+
+        // 3. Resolve role and products (may have changed since last login)
+        $role = MembershipService::resolveEffectiveRole($user, $company->id);
+        $activeProducts = MembershipService::resolveActiveProducts($user, $company);
+
+        // 4. Issue new access token (keep same refresh session)
+        $tokenData = TokenService::issueAccessToken(
+            userId: $user->id,
+            companyId: $company->id,
+            role: $role,
+            activeProducts: $activeProducts,
+            sessionId: $session->id,
+        );
+
+        return [
+            'token' => $tokenData['token'],
+            'expires_in' => $tokenData['expires_in'],
+            'active_products' => $activeProducts,
+        ];
+    }
+
+    /**
+     * Global logout — revoke ALL refresh sessions for the user.
+     */
+    public static function logout(int $userId): void
+    {
+        $revokedCount = SessionService::revokeAllUserSessions($userId);
+
+        AuditService::platform('auth.logout', [
+            'revoked_sessions' => $revokedCount,
+        ]);
+    }
+
+    /**
+     * Get user profile with company context.
+     */
+    public static function getCurrentUserProfile(int $userId, int $companyId): ?array
+    {
+        $user = User::find($userId);
+
+        if (! $user || ! $user->isActive()) {
+            return null;
+        }
+
+        $company = Company::active()->find($companyId);
+        $role = MembershipService::resolveEffectiveRole($user, $companyId);
+        $activeProducts = $company
+            ? MembershipService::resolveActiveProducts($user, $company)
+            : [];
+
+        return [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $role,
+                'current_company_id' => $company?->id,
+                'active_products' => $activeProducts,
+            ],
+            'company' => $company ? [
+                'id' => $company->id,
+                'code' => $company->code,
+                'name' => $company->name,
+                'status' => $company->status,
+            ] : null,
+        ];
+    }
+
+    // ── Private Helpers ──
+
+    private static function buildLoginResponse(
+        User $user,
+        ?Company $company,
+        Request $request,
+    ): array {
+        $companyId = $company?->id ?? 0;
+        $role = MembershipService::resolveEffectiveRole($user, $companyId ?: null);
+        $activeProducts = $company
+            ? MembershipService::resolveActiveProducts($user, $company)
+            : [];
+
+        // Create refresh session
+        $sessionData = SessionService::createSession(
+            userId: $user->id,
+            companyId: $companyId,
+            request: $request,
+        );
+
+        // Issue access token
+        $tokenData = TokenService::issueAccessToken(
+            userId: $user->id,
+            companyId: $companyId,
+            role: $role ?? 'super_admin',
+            activeProducts: $activeProducts,
+            sessionId: $sessionData['session']->id,
+        );
+
+        // Audit log
+        AuditService::platform('auth.login', [
+            'method' => 'email',
+        ], $companyId ?: null);
+
+        return [
+            'token_data' => $tokenData,
+            'refresh_token' => $sessionData['raw_token'],
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'role' => $role ?? 'super_admin',
+                'current_company_id' => $companyId ?: null,
+                'active_products' => $activeProducts,
+            ],
+        ];
+    }
+}

@@ -1,0 +1,61 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\HealthController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\InvoiceController;
+
+/*
+|--------------------------------------------------------------------------
+| Platform API Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('platform/v1')->group(function () {
+
+    // ── Health ──
+    Route::get('/health', [HealthController::class, 'index']);
+
+    // ── Auth (public) ──
+    Route::post('/auth/login/email', [AuthController::class, 'loginEmail']);
+    Route::post('/auth/refresh', [AuthController::class, 'refresh']);
+
+    // ── Authenticated routes ──
+    Route::middleware('jwt.auth')->group(function () {
+
+        // Auth
+        Route::post('/auth/logout', [AuthController::class, 'logout']);
+        Route::get('/me', [AuthController::class, 'me']);
+
+        // ── Super Admin only ──
+        Route::middleware('role:super_admin')->group(function () {
+
+            // Companies
+            Route::get('/companies', [CompanyController::class, 'index']);
+            Route::post('/companies', [CompanyController::class, 'store']);
+            Route::get('/companies/{id}', [CompanyController::class, 'show']);
+            Route::put('/companies/{id}', [CompanyController::class, 'update']);
+            Route::get('/companies/{id}/admins', [CompanyController::class, 'admins']);
+
+            // Company Subscriptions (super admin managing)
+            Route::get('/companies/{id}/subscriptions', [SubscriptionController::class, 'index']);
+            Route::post('/companies/{id}/subscriptions', [SubscriptionController::class, 'store']);
+
+            // Product Catalog
+            Route::get('/products', [SubscriptionController::class, 'products']);
+            Route::get('/plans', [SubscriptionController::class, 'plans']);
+            Route::get('/bundles', [SubscriptionController::class, 'bundles']);
+
+            // Invoices (global)
+            Route::get('/invoices', [InvoiceController::class, 'index']);
+        });
+
+        // ── Company Admin self-service ──
+        Route::middleware('role:company_admin,super_admin')->group(function () {
+            Route::get('/company/subscriptions', [SubscriptionController::class, 'mySubscriptions']);
+            Route::get('/company/invoices', [InvoiceController::class, 'myInvoices']);
+        });
+    });
+});
