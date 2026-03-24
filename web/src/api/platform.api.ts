@@ -52,11 +52,27 @@ export const platformApi = {
     getPlans: () => api.get('/platform/v1/plans'),
 
     // Invoices
-    getInvoices: (page = 1) =>
-        api.get(`/platform/v1/invoices?page=${page}`),
+    getInvoices: (params?: { company_id?: number; status?: string }) =>
+        api.get('/platform/v1/invoices', { params }),
 
-    getMyInvoices: (page = 1) =>
-        api.get(`/platform/v1/company/invoices?page=${page}`),
+    getInvoice: (id: number) =>
+        api.get(`/platform/v1/invoices/${id}`),
+
+    createInvoice: (data: {
+        company_id: number;
+        subscription_id?: number;
+        due_at?: string;
+        items: { description: string; quantity?: number; unit_price: number; product_id?: number }[];
+    }) => api.post('/platform/v1/invoices', data),
+
+    markInvoicePaid: (id: number) =>
+        api.put(`/platform/v1/invoices/${id}/pay`),
+
+    cancelInvoice: (id: number) =>
+        api.put(`/platform/v1/invoices/${id}/cancel`),
+
+    getMyInvoices: () =>
+        api.get('/platform/v1/company/invoices'),
 
     // Team (internal Corextor staff)
     getTeam: () => api.get('/platform/v1/team'),

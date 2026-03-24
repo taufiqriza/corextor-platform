@@ -72,8 +72,12 @@ Route::prefix('platform/v1')->group(function () {
         // ── Platform Team + Finance ──
         Route::middleware('role:super_admin,platform_staff,platform_finance')->group(function () {
 
-            // Invoices (global)
+            // Invoices (full CRUD)
             Route::get('/invoices', [InvoiceController::class, 'index']);
+            Route::get('/invoices/{id}', [InvoiceController::class, 'show']);
+            Route::post('/invoices', [InvoiceController::class, 'store']);
+            Route::put('/invoices/{id}/pay', [InvoiceController::class, 'markAsPaid']);
+            Route::put('/invoices/{id}/cancel', [InvoiceController::class, 'cancel']);
         });
 
         // ── Company Admin self-service ──
