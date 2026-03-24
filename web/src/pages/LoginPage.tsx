@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuthStore } from '@/store/authStore';
+import { getHomeRoute } from '@/guards/AuthGuard';
 import { Lock, Mail, Eye, EyeOff, ArrowRight, Loader2, Fingerprint } from 'lucide-react';
 
 export function LoginPage() {
@@ -19,16 +20,8 @@ export function LoginPage() {
         setError('');
         try {
             await login(email, password);
-            // Role-based redirect
             const user = useAuthStore.getState().user;
-            const role = user?.role ?? '';
-            if (['super_admin', 'platform_staff', 'platform_finance'].includes(role)) {
-                navigate('/admin', { replace: true });
-            } else if (role === 'company_admin') {
-                navigate('/company', { replace: true });
-            } else {
-                navigate('/employee', { replace: true });
-            }
+            navigate(getHomeRoute(user?.role), { replace: true });
         } catch (err: unknown) {
             const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login failed';
             setError(msg);
