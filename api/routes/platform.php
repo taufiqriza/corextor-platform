@@ -84,6 +84,14 @@ Route::prefix('platform/v1')->group(function () {
         Route::middleware('role:company_admin,super_admin,platform_staff')->group(function () {
             Route::get('/company/subscriptions', [SubscriptionController::class, 'mySubscriptions']);
             Route::get('/company/invoices', [InvoiceController::class, 'myInvoices']);
+
+            // Company profile management
+            Route::get('/company/profile', [CompanyController::class, 'myProfile']);
+            Route::put('/company/profile', [CompanyController::class, 'updateMyProfile']);
+
+            // Company members (self-service)
+            Route::get('/company/members', [CompanyController::class, 'myMembers']);
+            Route::put('/company/members/{membershipId}', [CompanyController::class, 'updateMyMember']);
         });
     });
 });

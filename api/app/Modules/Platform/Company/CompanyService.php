@@ -50,14 +50,16 @@ class CompanyService
     {
         $company = Company::findOrFail($id);
 
-        $company->update(array_filter([
-            'name' => $data['name'] ?? null,
-            'status' => $data['status'] ?? null,
-        ]));
+        $allowedFields = ['name', 'status', 'address', 'phone', 'email', 'industry'];
+        $updates = array_intersect_key($data, array_flip($allowedFields));
+
+        if (! empty($updates)) {
+            $company->update($updates);
+        }
 
         AuditService::platform('company.updated', [
             'company_id' => $company->id,
-            'changes' => $data,
+            'changes' => $updates,
         ]);
 
         return $company->fresh();

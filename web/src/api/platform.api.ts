@@ -74,6 +74,19 @@ export const platformApi = {
     getMyInvoices: () =>
         api.get('/platform/v1/company/invoices'),
 
+    // Company self-service (for company_admin)
+    getMyProfile: () =>
+        api.get('/platform/v1/company/profile'),
+
+    updateMyProfile: (data: { name?: string; address?: string; phone?: string; email?: string; industry?: string }) =>
+        api.put('/platform/v1/company/profile', data),
+
+    getMyMembers: () =>
+        api.get('/platform/v1/company/members'),
+
+    updateMyMember: (membershipId: number, data: { role?: string }) =>
+        api.put(`/platform/v1/company/members/${membershipId}`, data),
+
     // Team (internal Corextor staff)
     getTeam: () => api.get('/platform/v1/team'),
 

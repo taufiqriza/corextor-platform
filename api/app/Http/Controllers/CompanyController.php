@@ -172,4 +172,99 @@ class CompanyController extends Controller
         MemberService::removeMember($id, $membershipId);
         return ApiResponse::success(null, 'Member removed.');
     }
+
+    // ── Company Admin Self-Service ──
+
+    /**
+     * GET /platform/v1/company/profile
+     */
+    public function myProfile(Request $request): JsonResponse
+    {
+        $companyId = $request->attributes->get('auth_company_id');
+        $company = CompanyService::findOrFail($companyId);
+        $stats = MemberService::statsForCompany($companyId);
+
+        return ApiResponse::success([
+            'company' => $company,
+            'stats' => $stats,
+        ]);
+    }
+
+    /**
+     * PUT /platform/v1/company/profile
+     */
+    public function updateMyProfile(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name'     => 'sometimes|string|max:255',
+            'address'  => 'sometimes|nullable|string|max:500',
+            'phone'    => 'sometimes|nullable|string|max:30',
+            'email'    => 'sometimes|nullable|email|max:255',
+            'industry' => 'sometimes|nullable|string|max:100',
+        ]);
+
+        $companyId = $request->attributes->get('auth_company_id');
+        $company = CompanyService::update($companyId, $request->only([
+            'name', 'address', 'phone', 'email', 'industry',
+        ]));
+
+        return ApiResponse::success($company);
+    }
+
+    /**
+     * GET /platform/v1/company/members
+     */
+    public function myMembers(Request $request): JsonResponse
+    {
+        $companyId = $request->attributes->get('auth_company_id');
+        $members = MemberService::listByCompany($companyId);
+        $stats = MemberService::statsForCompany($companyId);
+
+        $result = $members->map(fn ($m) => [
+            'id' => $m->id,
+            'user_id' => $m->user_id,
+            'role' => $m->role,
+            'status' => $m->status,
+            'created_at' => $m->created_at?->toISOString(),
+            'user' => $m->user ? [
+                'id' => $m->user->id,
+                'name' => $m->user->name,
+                'email' => $m->user->email,
+            ] : null,
+        ]);
+
+        return ApiResponse::success([
+            'stats' => $stats,
+            'members' => $result,
+        ]);
+    }
+
+    /**
+     * PUT /platform/v1/company/members/{membershipId}
+     */
+    public function updateMyMember(Request $request, int $membershipId): JsonResponse
+    {
+        $request->validate([
+            'role' => 'sometimes|string|in:company_admin,employee',
+        ]);
+
+        $companyId = $request->attributes->get('auth_company_id');
+
+        try {
+            $membership = MemberService::updateMember($companyId, $membershipId, $request->only(['role']));
+
+            return ApiResponse::success([
+                'id' => $membership->id,
+                'role' => $membership->role,
+                'status' => $membership->status,
+                'user' => $membership->user ? [
+                    'id' => $membership->user->id,
+                    'name' => $membership->user->name,
+                    'email' => $membership->user->email,
+                ] : null,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return ApiResponse::badRequest($e->getMessage());
+        }
+    }
 }
