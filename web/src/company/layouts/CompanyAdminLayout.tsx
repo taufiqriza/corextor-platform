@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     Building2, ChevronDown, ClipboardList,
     LayoutDashboard, LogOut, MapPin, Menu, Moon, Receipt,
@@ -15,6 +15,7 @@ import { CompanyReportPanel } from '@/company/panels/CompanyReportPanel';
 import { CompanyInvoicePanel } from '@/company/panels/CompanyInvoicePanel';
 import { CompanySettingsPanel } from '@/company/panels/CompanySettingsPanel';
 
+/* ═══ Hooks ═══ */
 function useIsDesktop() {
     const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
     useEffect(() => {
@@ -26,6 +27,7 @@ function useIsDesktop() {
     return isDesktop;
 }
 
+/* ═══ Navigation Config ═══ */
 type NavKey = 'dashboard' | 'employees' | 'attendance' | 'branches' | 'report' | 'invoices' | 'settings';
 type NavItem = { key: NavKey; label: string; icon: typeof LayoutDashboard };
 type NavGroup = { label: string; items: NavItem[] };
@@ -33,9 +35,7 @@ type NavGroup = { label: string; items: NavItem[] };
 const NAV_GROUPS: NavGroup[] = [
     {
         label: 'Utama',
-        items: [
-            { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        ],
+        items: [{ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }],
     },
     {
         label: 'Manajemen',
@@ -47,21 +47,17 @@ const NAV_GROUPS: NavGroup[] = [
     {
         label: 'Kehadiran',
         items: [
-            { key: 'attendance', label: 'Kehadiran', icon: ClipboardList },
+            { key: 'attendance', label: 'Absensi', icon: ClipboardList },
             { key: 'report', label: 'Laporan', icon: ClipboardList },
         ],
     },
     {
         label: 'Billing',
-        items: [
-            { key: 'invoices', label: 'Tagihan', icon: Receipt },
-        ],
+        items: [{ key: 'invoices', label: 'Tagihan', icon: Receipt }],
     },
     {
-        label: 'Lainnya',
-        items: [
-            { key: 'settings', label: 'Pengaturan', icon: Settings },
-        ],
+        label: 'Sistem',
+        items: [{ key: 'settings', label: 'Pengaturan', icon: Settings }],
     },
 ];
 
@@ -75,6 +71,11 @@ const SECTION_META: Record<NavKey, { title: string; subtitle: string }> = {
     settings: { title: 'Pengaturan', subtitle: 'Konfigurasi perusahaan.' },
 };
 
+/* ═══ Sidebar Accent ═══ */
+const SIDEBAR_BG = 'linear-gradient(180deg, #0E4429 0%, #0D3522 38%, #0A1F15 100%)';
+const SIDEBAR_ACCENT = '#34D399';
+
+/* ═══ Layout ═══ */
 export function CompanyAdminLayout() {
     const navigate = useNavigate();
     const isDesktop = useIsDesktop();
@@ -92,7 +93,6 @@ export function CompanyAdminLayout() {
     const sidebarWidth = sidebarCollapsed ? 72 : 220;
     const curveSize = 32;
     const activeMeta = SECTION_META[activeNav];
-
     const companyName = user?.company?.name ?? 'Perusahaan';
 
     const handleSelectNav = (key: NavKey) => {
@@ -126,269 +126,370 @@ export function CompanyAdminLayout() {
         }
     };
 
-    /* ═══ Shared Styles ═══ */
-    const ss = {
-        sidebarItem: (active: boolean) => ({
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: sidebarCollapsed ? '10px 0' : '10px 14px',
-            borderRadius: 12, cursor: 'pointer', transition: 'all .15s ease',
-            background: active ? `${T.primary}14` : 'transparent',
-            color: active ? T.primary : T.textSub,
-            fontWeight: active ? 800 : 500,
-            fontSize: 13,
-            justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-            border: active ? `1px solid ${T.primary}30` : '1px solid transparent',
-        } as React.CSSProperties),
-        mobileNavItem: (active: boolean) => ({
-            display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 2,
-            padding: '8px 0', borderRadius: 12, flex: 1,
-            color: active ? T.primary : T.textMuted, fontSize: 10, fontWeight: active ? 800 : 500,
-            background: active ? `${T.primary}10` : 'transparent',
-        } as React.CSSProperties),
-    };
-
     return (
         <div style={{ minHeight: '100vh', background: T.bg, color: T.text, fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
             {isDesktop ? (
                 <>
-                    {/* Corner notches */}
-                    <div style={{ position: 'fixed', left: sidebarWidth - 1, top: 0, width: curveSize, height: curveSize, zIndex: 11, overflow: 'hidden', pointerEvents: 'none' }}>
-                        <div style={{ position: 'absolute', inset: 0, background: T.bg, borderTopLeftRadius: curveSize }} />
-                    </div>
-                    <div style={{ position: 'fixed', left: sidebarWidth - 1, bottom: 0, width: curveSize, height: curveSize, zIndex: 11, overflow: 'hidden', pointerEvents: 'none' }}>
-                        <div style={{ position: 'absolute', inset: 0, background: T.bg, borderBottomLeftRadius: curveSize }} />
-                    </div>
+                    {/* Corner notches — identical to AdminLayout */}
+                    {[
+                        { top: 0, left: sidebarWidth, bg: `radial-gradient(circle at 100% 100%, transparent ${curveSize}px, #0E4429 ${curveSize}px)` },
+                        { bottom: 0, left: sidebarWidth, bg: `radial-gradient(circle at 100% 0%, transparent ${curveSize}px, #0A1F15 ${curveSize}px)` },
+                        { top: 0, right: 0, bg: `radial-gradient(circle at 0% 100%, transparent ${curveSize}px, ${T.bg} ${curveSize}px)` },
+                        { bottom: 0, right: 0, bg: `radial-gradient(circle at 0% 0%, transparent ${curveSize}px, ${T.bg} ${curveSize}px)` },
+                    ].map((pos, i) => (
+                        <div key={i} aria-hidden style={{
+                            position: 'fixed', width: curveSize, height: curveSize, zIndex: 61, pointerEvents: 'none',
+                            background: pos.bg, transition: 'left .25s ease',
+                            ...(pos.top !== undefined ? { top: pos.top } : {}),
+                            ...(pos.bottom !== undefined ? { bottom: pos.bottom } : {}),
+                            ...(pos.left !== undefined ? { left: pos.left } : {}),
+                            ...(pos.right !== undefined ? { right: pos.right } : {}),
+                        }} />
+                    ))}
 
-                    {/* Desktop Sidebar */}
-                    <nav style={{
-                        position: 'fixed', left: 0, top: 0, bottom: 0,
-                        width: sidebarWidth, transition: 'width .2s ease',
-                        background: T.navBg, backdropFilter: 'blur(24px)',
-                        display: 'flex', flexDirection: 'column', zIndex: 10,
-                        borderRight: `1px solid ${T.border}`,
+                    {/* Sidebar */}
+                    <aside style={{
+                        position: 'fixed', top: 0, left: 0, bottom: 0, width: sidebarWidth, zIndex: 60,
+                        background: SIDEBAR_BG,
+                        display: 'flex', flexDirection: 'column', transition: 'width .25s ease',
+                        boxShadow: '10px 0 30px rgba(3,10,20,.25)',
                     }}>
                         {/* Logo */}
-                        <div style={{
-                            padding: sidebarCollapsed ? '18px 8px' : '18px 16px',
-                            borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center',
-                            justifyContent: sidebarCollapsed ? 'center' : 'space-between',
-                        }}>
-                            {!sidebarCollapsed && (
-                                <div>
-                                    <div style={{ fontSize: 15, fontWeight: 900, color: T.primary, fontFamily: "'Sora', sans-serif" }}>
-                                        <Building2 size={14} style={{ display: 'inline', marginRight: 6 }} />
-                                        {companyName.length > 16 ? companyName.slice(0, 16) + '…' : companyName}
-                                    </div>
-                                    <div style={{ fontSize: 9, color: T.textMuted, marginTop: 2, textTransform: 'uppercase', letterSpacing: 1.2 }}>Company Portal</div>
+                        <div style={{ height: 72, padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+                                <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg, #34D399, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Building2 size={18} color="#fff" />
                                 </div>
-                            )}
-                            <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                                style={{ color: T.textMuted, padding: 4, borderRadius: 8, transition: 'color .15s' }}>
-                                <Menu size={16} />
-                            </button>
+                                {!sidebarCollapsed && (
+                                    <div>
+                                        <div style={{ fontSize: 14, fontWeight: 900, color: '#fff', fontFamily: "'Sora', sans-serif", lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 120 }}>{companyName}</div>
+                                        <div style={{ fontSize: 10, color: '#6EE7B7', marginTop: 2 }}>Company Portal</div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Nav */}
-                        <div style={{ flex: 1, overflowY: 'auto', padding: sidebarCollapsed ? '8px' : '8px 10px' }}>
+                        {/* Nav Groups */}
+                        <div style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
                             {NAV_GROUPS.map(group => (
-                                <div key={group.label} style={{ marginBottom: 12 }}>
+                                <div key={group.label} style={{ marginBottom: 6 }}>
                                     {!sidebarCollapsed && (
-                                        <div style={{ fontSize: 9, fontWeight: 800, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, padding: '6px 14px' }}>
+                                        <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(110,231,183,.45)', textTransform: 'uppercase', letterSpacing: 1.2, padding: '8px 12px 4px', userSelect: 'none' }}>
                                             {group.label}
                                         </div>
                                     )}
-                                    {group.items.map(item => (
-                                        <button key={item.key} onClick={() => handleSelectNav(item.key)} style={ss.sidebarItem(activeNav === item.key)} title={item.label}>
-                                            <item.icon size={16} />
-                                            {!sidebarCollapsed && <span>{item.label}</span>}
-                                        </button>
-                                    ))}
+                                    {sidebarCollapsed && <div style={{ height: 1, background: 'rgba(255,255,255,.06)', margin: '6px 8px' }} />}
+                                    {group.items.map(item => {
+                                        const Icon = item.icon;
+                                        const isActive = activeNav === item.key;
+                                        return (
+                                            <button key={item.key} onClick={() => handleSelectNav(item.key)} title={sidebarCollapsed ? item.label : undefined}
+                                                style={{
+                                                    width: '100%', display: 'flex', alignItems: 'center',
+                                                    justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                                                    gap: 9, borderRadius: 10, padding: sidebarCollapsed ? '9px 0' : '9px 10px',
+                                                    background: isActive ? 'rgba(52,211,153,.22)' : 'transparent',
+                                                    color: isActive ? '#fff' : '#A7F3D0', marginBottom: 2,
+                                                    transition: 'all .2s ease', position: 'relative',
+                                                }}
+                                            >
+                                                {isActive && <span style={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', width: 3, height: 18, borderRadius: 20, background: SIDEBAR_ACCENT, boxShadow: `0 0 14px ${SIDEBAR_ACCENT}88` }} />}
+                                                <div style={{ width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isActive ? 'rgba(255,255,255,.17)' : 'rgba(255,255,255,.06)' }}>
+                                                    <Icon size={14} />
+                                                </div>
+                                                {!sidebarCollapsed && <span style={{ fontSize: 12, fontWeight: isActive ? 700 : 600 }}>{item.label}</span>}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             ))}
                         </div>
 
-                        {/* User */}
-                        <div style={{ padding: sidebarCollapsed ? '10px 8px' : '10px 14px', borderTop: `1px solid ${T.border}` }}>
+                        {/* Bottom: Logout */}
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,.06)', padding: '10px 8px' }}>
                             <button onClick={() => setShowLogoutModal(true)} style={{
-                                display: 'flex', alignItems: 'center', gap: 8, color: T.danger,
-                                fontSize: 12, fontWeight: 600, padding: '8px 0', width: '100%',
-                                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                                width: '100%', height: 38, borderRadius: 10,
+                                border: '1px solid rgba(255,255,255,.15)', background: 'rgba(239,68,68,.1)',
+                                color: '#FCA5A5', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                                fontWeight: 700, fontSize: 11,
                             }}>
-                                <LogOut size={14} />{!sidebarCollapsed && 'Keluar'}
+                                <LogOut size={13} />
+                                {!sidebarCollapsed && 'Keluar'}
                             </button>
+                            {!sidebarCollapsed && (
+                                <div style={{ textAlign: 'center', marginTop: 8 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.35)' }}>Corextor</div>
+                                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,.2)', marginTop: 1 }}>Company Portal v1.0</div>
+                                </div>
+                            )}
                         </div>
-                    </nav>
+                    </aside>
 
-                    {/* Desktop Main */}
-                    <main style={{ marginLeft: sidebarWidth, transition: 'margin .2s ease', minHeight: '100vh' }}>
-                        {/* Header */}
-                        <header style={{
-                            padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            borderBottom: `1px solid ${T.border}`, background: T.bg, position: 'sticky', top: 0, zIndex: 5,
-                        }}>
+                    {/* Header */}
+                    <header style={{
+                        position: 'fixed', top: 0, left: sidebarWidth, right: 0, height: 72, zIndex: 50,
+                        background: isDark ? `${T.bgAlt}F4` : `${T.bgAlt}EE`,
+                        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '0 24px', transition: 'left .25s ease',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                            <button onClick={() => setSidebarCollapsed(p => !p)} style={{
+                                width: 38, height: 38, borderRadius: 10, border: `1px solid ${T.border}`,
+                                background: T.card, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.textSub,
+                            }} aria-label="Toggle sidebar">
+                                <Menu size={16} />
+                            </button>
                             <div>
-                                <h1 style={{ fontSize: 18, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif" }}>{activeMeta.title}</h1>
-                                <p style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>{activeMeta.subtitle}</p>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <button onClick={toggleTheme} style={{
-                                    width: 36, height: 36, borderRadius: 10, border: `1px solid ${T.border}`,
-                                    background: T.bgAlt, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textSub,
-                                }}>{isDark ? <Sun size={14} /> : <Moon size={14} />}</button>
-                                <div ref={profileRef} style={{ position: 'relative' }}>
-                                    <button onClick={() => setProfileOpen(!profileOpen)} style={{
-                                        display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px',
-                                        borderRadius: 12, border: `1px solid ${T.border}`, background: T.bgAlt,
-                                    }}>
-                                        <div style={{
-                                            width: 28, height: 28, borderRadius: 8, background: `${T.primary}20`,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            fontSize: 11, fontWeight: 900, color: T.primary,
-                                        }}>{(user?.name ?? 'A').charAt(0)}</div>
-                                        <div style={{ textAlign: 'left' }}>
-                                            <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{user?.name ?? 'Admin'}</div>
-                                            <div style={{ fontSize: 9, color: T.textMuted }}>Company Admin</div>
-                                        </div>
-                                        <ChevronDown size={12} color={T.textMuted} />
-                                    </button>
-                                    {profileOpen && (
-                                        <div style={{
-                                            position: 'absolute', right: 0, top: '100%', marginTop: 6,
-                                            background: T.card, border: `1px solid ${T.border}`, borderRadius: 14,
-                                            boxShadow: T.shadow, minWidth: 180, overflow: 'hidden', zIndex: 20,
-                                        }}>
-                                            <button onClick={() => { setProfileOpen(false); setActiveNav('settings'); }} style={{
-                                                display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', width: '100%',
-                                                fontSize: 12, color: T.text, borderBottom: `1px solid ${T.border}`,
-                                            }}><UserCircle size={14} /> Profil</button>
-                                            <button onClick={() => { setProfileOpen(false); setShowLogoutModal(true); }} style={{
-                                                display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', width: '100%',
-                                                fontSize: 12, color: T.danger,
-                                            }}><LogOut size={14} /> Keluar</button>
-                                        </div>
-                                    )}
+                                <div style={{ fontSize: 18, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif", lineHeight: 1.1 }}>{activeMeta.title}</div>
+                                <div style={{ fontSize: 12, color: T.textMuted, marginTop: 3 }}>
+                                    {new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())}
                                 </div>
                             </div>
-                        </header>
+                        </div>
 
-                        {/* Content */}
-                        <div style={{ padding: 20 }}>{renderContent()}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <button onClick={toggleTheme} style={{ width: 38, height: 38, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.textSub }} aria-label="Toggle theme">
+                                {isDark ? <Sun size={16} color={T.gold} /> : <Moon size={16} color={T.info} />}
+                            </button>
+
+                            <div style={{ width: 1, height: 30, background: T.border }} />
+
+                            {/* Profile */}
+                            <div ref={profileRef} style={{ position: 'relative' }}>
+                                <button onClick={() => setProfileOpen(p => !p)} style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    background: profileOpen ? `${T.primary}10` : 'transparent',
+                                    border: profileOpen ? `1px solid ${T.primary}30` : `1px solid transparent`,
+                                    borderRadius: 12, padding: '4px 10px 4px 4px', cursor: 'pointer', transition: 'all .15s ease',
+                                }}>
+                                    <div style={{
+                                        width: 34, height: 34, borderRadius: 10,
+                                        background: 'linear-gradient(135deg, #34D399, #059669)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        color: '#fff', fontWeight: 900, fontSize: 13,
+                                    }}>
+                                        {(user?.name ?? 'A').slice(0, 1).toUpperCase()}
+                                    </div>
+                                    <div style={{ textAlign: 'left' }}>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: T.text, lineHeight: 1.2 }}>{user?.name ?? 'Admin'}</div>
+                                        <div style={{ fontSize: 9, color: T.textMuted }}>Company Admin</div>
+                                    </div>
+                                    <ChevronDown size={12} color={T.textMuted} style={{ transition: 'transform .15s', transform: profileOpen ? 'rotate(180deg)' : 'rotate(0)' }} />
+                                </button>
+
+                                {profileOpen && (
+                                    <div style={{
+                                        position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                                        width: 240, borderRadius: 14, overflow: 'hidden',
+                                        background: T.card, border: `1px solid ${T.border}`,
+                                        boxShadow: '0 12px 40px rgba(0,0,0,.2)', backdropFilter: 'blur(16px)',
+                                        zIndex: 999, animation: 'profileDropIn .15s ease',
+                                    }}>
+                                        <div style={{ padding: '14px 16px 12px', borderBottom: `1px solid ${T.border}40`, background: `${T.primary}06` }}>
+                                            <div style={{ fontSize: 12, fontWeight: 800, color: T.text }}>{user?.name ?? 'Admin'}</div>
+                                            <div style={{ fontSize: 9, color: T.textMuted }}>{companyName} • Company Admin</div>
+                                        </div>
+                                        <div style={{ padding: '6px' }}>
+                                            {[
+                                                { icon: UserCircle, label: 'Profil', desc: 'Informasi akun', action: () => { setProfileOpen(false); setActiveNav('settings'); } },
+                                                { icon: isDark ? Sun : Moon, label: isDark ? 'Light Mode' : 'Dark Mode', desc: `Saat ini: ${isDark ? 'Dark' : 'Light'}`, action: () => { toggleTheme(); setProfileOpen(false); } },
+                                            ].map((item, idx) => (
+                                                <button key={idx} onClick={item.action} style={{
+                                                    width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                                                    padding: '8px 10px', borderRadius: 8, textAlign: 'left',
+                                                    transition: 'background .12s ease',
+                                                }} onMouseEnter={e => (e.currentTarget.style.background = `${T.border}40`)} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                                    <div style={{ width: 28, height: 28, borderRadius: 8, background: `${T.primary}12`, color: T.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                        <item.icon size={13} />
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: 11, fontWeight: 700, color: T.text }}>{item.label}</div>
+                                                        <div style={{ fontSize: 9, color: T.textMuted }}>{item.desc}</div>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div style={{ padding: '4px 6px 8px', borderTop: `1px solid ${T.border}40` }}>
+                                            <button onClick={() => { setProfileOpen(false); setShowLogoutModal(true); }} style={{
+                                                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                                                padding: '8px 10px', borderRadius: 8, textAlign: 'left', transition: 'background .12s ease',
+                                            }} onMouseEnter={e => (e.currentTarget.style.background = '#ef444410')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                                                <div style={{ width: 28, height: 28, borderRadius: 8, background: '#ef444415', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                    <LogOut size={13} />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444' }}>Keluar</div>
+                                                    <div style={{ fontSize: 9, color: T.textMuted }}>Logout dari portal</div>
+                                                </div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </header>
+
+                    <main style={{ marginLeft: sidebarWidth, padding: '96px 24px 34px', transition: 'margin-left .25s ease' }}>
+                        {renderContent()}
                     </main>
                 </>
             ) : (
                 <>
                     {/* Mobile Header */}
                     <header style={{
-                        position: 'sticky', top: 0, zIndex: 20, padding: '12px 16px',
+                        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 70, height: 64,
+                        padding: '0 var(--cx-mobile-gutter, 16px)',
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        background: T.navBg, backdropFilter: 'blur(20px)', borderBottom: `1px solid ${T.border}`,
+                        borderBottom: `1px solid ${T.border}`,
+                        background: isDark ? `${T.bgAlt}F4` : `${T.bgAlt}EC`,
+                        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
                     }}>
-                        <div>
-                            <div style={{ fontSize: 14, fontWeight: 900, color: T.primary, fontFamily: "'Sora', sans-serif" }}>
-                                <Building2 size={14} style={{ display: 'inline', marginRight: 4 }} />
-                                {companyName.length > 20 ? companyName.slice(0, 20) + '…' : companyName}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <button onClick={() => setMobileMenuOpen(true)} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.textSub }} aria-label="Open menu">
+                                <Menu size={15} />
+                            </button>
+                            <div>
+                                <div style={{ fontSize: 14, fontWeight: 900, color: T.text, lineHeight: 1.1 }}>{companyName}</div>
+                                <div style={{ fontSize: 10, color: T.textMuted, marginTop: 1 }}>{activeMeta.title}</div>
                             </div>
-                            <div style={{ fontSize: 9, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1 }}>Company Portal</div>
                         </div>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                            <button onClick={toggleTheme} style={{
-                                width: 34, height: 34, borderRadius: 10, border: `1px solid ${T.border}`,
-                                background: T.bgAlt, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textSub,
-                            }}>{isDark ? <Sun size={14} /> : <Moon size={14} />}</button>
-                            <button onClick={() => setMobileMenuOpen(true)} style={{
-                                width: 34, height: 34, borderRadius: 10, border: `1px solid ${T.border}`,
-                                background: T.bgAlt, display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textSub,
-                            }}><Menu size={16} /></button>
-                        </div>
+                        <button onClick={toggleTheme} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Toggle theme">
+                            {isDark ? <Sun size={14} color={T.gold} /> : <Moon size={14} color={T.info} />}
+                        </button>
                     </header>
 
-                    {/* Mobile Section Title */}
-                    <div style={{ padding: '12px 16px 0' }}>
-                        <h1 style={{ fontSize: 18, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif" }}>{activeMeta.title}</h1>
-                        <p style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>{activeMeta.subtitle}</p>
-                    </div>
+                    <main style={{ padding: '76px var(--cx-mobile-gutter, 16px) 104px' }}>
+                        {renderContent()}
+                    </main>
 
-                    {/* Mobile Content */}
-                    <div style={{ padding: 16, paddingBottom: 90 }}>{renderContent()}</div>
-
-                    {/* Mobile Bottom Nav */}
+                    {/* Bottom Nav */}
                     <nav style={{
-                        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 20,
-                        background: T.navBg, backdropFilter: 'blur(20px)',
-                        borderTop: `1px solid ${T.border}`,
-                        display: 'flex', padding: '6px 8px', paddingBottom: 'max(6px, env(safe-area-inset-bottom))',
+                        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 75,
+                        padding: '0 var(--cx-mobile-nav-padding, 12px) 14px',
+                        paddingBottom: 'max(14px, env(safe-area-inset-bottom))',
                     }}>
-                        {([
-                            { key: 'dashboard' as NavKey, label: 'Home', icon: LayoutDashboard },
-                            { key: 'employees' as NavKey, label: 'Karyawan', icon: Users },
-                            { key: 'attendance' as NavKey, label: 'Hadir', icon: ClipboardList },
-                            { key: 'report' as NavKey, label: 'Laporan', icon: ClipboardList },
-                            { key: 'settings' as NavKey, label: 'Lainnya', icon: Settings },
-                        ]).map(item => (
-                            <button key={item.key} onClick={() => handleSelectNav(item.key)} style={ss.mobileNavItem(activeNav === item.key)}>
-                                <item.icon size={18} />
-                                <span>{item.label}</span>
-                            </button>
-                        ))}
-                    </nav>
-
-                    {/* Mobile Full Menu */}
-                    {mobileMenuOpen && (
-                        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,.5)' }} onClick={() => setMobileMenuOpen(false)}>
-                            <div style={{
-                                position: 'absolute', bottom: 0, left: 0, right: 0,
-                                background: T.card, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-                                maxHeight: '80vh', overflowY: 'auto', padding: '16px 16px 32px',
-                            }} onClick={e => e.stopPropagation()}>
-                                <div style={{ width: 40, height: 4, borderRadius: 2, background: T.border, margin: '0 auto 16px' }} />
-                                {NAV_GROUPS.map(g => (
-                                    <div key={g.label} style={{ marginBottom: 12 }}>
-                                        <div style={{ fontSize: 9, fontWeight: 800, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1.2, padding: '4px 0' }}>{g.label}</div>
-                                        {g.items.map(item => (
-                                            <button key={item.key} onClick={() => handleSelectNav(item.key)} style={{
-                                                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', width: '100%',
-                                                borderRadius: 12, fontSize: 14, fontWeight: activeNav === item.key ? 800 : 500,
-                                                color: activeNav === item.key ? T.primary : T.text,
-                                                background: activeNav === item.key ? `${T.primary}10` : 'transparent',
-                                            }}>
-                                                <item.icon size={18} />{item.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                ))}
-                                <div style={{ borderTop: `1px solid ${T.border}`, marginTop: 8, paddingTop: 12 }}>
-                                    <button onClick={() => { setMobileMenuOpen(false); setShowLogoutModal(true); }} style={{
-                                        display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', width: '100%',
-                                        borderRadius: 12, fontSize: 14, color: T.danger,
-                                    }}><LogOut size={18} /> Keluar</button>
-                                </div>
-                            </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6, background: T.navBg, border: `1px solid ${T.border}`, borderRadius: 'var(--cx-mobile-nav-radius, 30px)', padding: '8px 6px 14px', boxShadow: T.shadow }}>
+                            {[
+                                { key: 'dashboard' as NavKey, label: 'Home', icon: LayoutDashboard },
+                                { key: 'employees' as NavKey, label: 'Karyawan', icon: Users },
+                                { key: 'attendance' as NavKey, label: 'Absensi', icon: ClipboardList },
+                                { key: 'settings' as NavKey, label: 'Menu', icon: Menu },
+                            ].map(item => {
+                                const isActive = item.key === 'settings' ? mobileMenuOpen : activeNav === item.key;
+                                const Icon = item.icon;
+                                return (
+                                    <button key={item.label} onClick={() => item.key === 'settings' ? setMobileMenuOpen(true) : handleSelectNav(item.key)}
+                                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, paddingTop: 2, color: isActive ? T.primary : T.textMuted }}>
+                                        <div style={{ width: 32, height: 32, borderRadius: 10, background: isActive ? `${T.primary}20` : 'transparent', border: isActive ? `1px solid ${T.primary}40` : '1px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Icon size={16} />
+                                        </div>
+                                        <span style={{ fontSize: 10, fontWeight: isActive ? 800 : 600 }}>{item.label}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
-                    )}
+                    </nav>
                 </>
             )}
 
-            {/* Logout Confirmation */}
+            {/* Mobile Menu Bottom Sheet */}
+            {mobileMenuOpen && (
+                <>
+                    <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', backdropFilter: 'blur(6px)', zIndex: 88 }} />
+                    <div style={{
+                        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 89,
+                        maxHeight: '80vh', overflowY: 'auto',
+                        background: T.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+                        border: `1px solid ${T.border}`, boxShadow: T.shadow,
+                        padding: '0 var(--cx-mobile-gutter, 16px) calc(16px + env(safe-area-inset-bottom))',
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 6px' }}>
+                            <div style={{ width: 36, height: 4, borderRadius: 99, background: T.border }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                            <div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: T.text }}>Menu</div>
+                                <div style={{ fontSize: 10, color: T.textMuted }}>{companyName}</div>
+                            </div>
+                            <button onClick={() => setMobileMenuOpen(false)} style={{ width: 32, height: 32, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.textSub }}>
+                                <X size={14} />
+                            </button>
+                        </div>
+
+                        {NAV_GROUPS.map(group => (
+                            <div key={group.label} style={{ marginBottom: 16 }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, paddingLeft: 2 }}>{group.label}</div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                                    {group.items.map(item => {
+                                        const isActive = activeNav === item.key;
+                                        const Icon = item.icon;
+                                        return (
+                                            <button key={item.key} onClick={() => handleSelectNav(item.key)} style={{
+                                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                                                padding: '12px 4px 10px', borderRadius: 14,
+                                                border: isActive ? `1.5px solid ${T.primary}50` : `1px solid ${T.border}`,
+                                                background: isActive ? `${T.primary}12` : T.card,
+                                                color: isActive ? T.primary : T.textSub, transition: 'all .15s ease',
+                                            }}>
+                                                <div style={{ width: 40, height: 40, borderRadius: 12, background: isActive ? `${T.primary}20` : T.bgAlt, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Icon size={18} />
+                                                </div>
+                                                <span style={{ fontSize: 10, fontWeight: isActive ? 800 : 600, lineHeight: 1.1, textAlign: 'center' }}>{item.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+
+                        <button onClick={() => setShowLogoutModal(true)} style={{
+                            width: '100%', height: 44, borderRadius: 14,
+                            border: `1px solid ${T.danger}40`, background: `${T.danger}08`,
+                            color: T.danger, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                            fontWeight: 800, fontSize: 13,
+                        }}>
+                            <LogOut size={15} /> Keluar
+                        </button>
+                    </div>
+                </>
+            )}
+
+            {/* Logout Modal */}
             {showLogoutModal && (
-                <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-                    onClick={() => setShowLogoutModal(false)}>
-                    <div style={{ background: T.card, borderRadius: 18, border: `1px solid ${T.border}`, padding: 24, width: '100%', maxWidth: 360 }}
-                        onClick={e => e.stopPropagation()}>
-                        <h3 style={{ fontSize: 16, fontWeight: 900, color: T.text, marginBottom: 8 }}>Keluar dari Akun?</h3>
-                        <p style={{ fontSize: 12, color: T.textMuted, marginBottom: 20 }}>Anda akan keluar dari Company Portal.</p>
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <>
+                    <div onClick={() => setShowLogoutModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
+                    <div style={{
+                        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 101,
+                        width: 'min(380px, calc(100vw - 32px))', borderRadius: 20,
+                        background: T.card, border: `1px solid ${T.border}`, padding: 24,
+                        boxShadow: '0 24px 60px rgba(0,0,0,.4)', animation: 'scaleIn .2s ease',
+                    }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ width: 56, height: 56, borderRadius: 16, background: `${T.danger}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <LogOut size={24} color={T.danger} />
+                            </div>
+                            <h3 style={{ fontSize: 18, fontWeight: 900, color: T.text, marginBottom: 8 }}>Keluar dari Portal?</h3>
+                            <p style={{ fontSize: 13, color: T.textMuted, marginBottom: 24 }}>Anda akan logout dan dikembalikan ke halaman login.</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: 10 }}>
                             <button onClick={() => setShowLogoutModal(false)} style={{
-                                height: 40, padding: '0 18px', borderRadius: 11, border: `1px solid ${T.border}`,
-                                background: T.bgAlt, color: T.textSub, fontSize: 12, fontWeight: 700,
+                                flex: 1, height: 44, borderRadius: 12, border: `1px solid ${T.border}`,
+                                background: T.surface, color: T.text, fontWeight: 700, fontSize: 13,
                             }}>Batal</button>
                             <button onClick={handleLogout} style={{
-                                height: 40, padding: '0 20px', borderRadius: 11, background: T.danger,
-                                color: '#fff', fontSize: 12, fontWeight: 700,
+                                flex: 1, height: 44, borderRadius: 12,
+                                background: T.danger, color: '#fff', fontWeight: 700, fontSize: 13,
                             }}>Ya, Keluar</button>
                         </div>
                     </div>
-                </div>
+                </>
             )}
+
+            <style>{`
+                @keyframes profileDropIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes scaleIn { from { opacity: 0; transform: translate(-50%,-50%) scale(.92); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+            `}</style>
         </div>
     );
 }
