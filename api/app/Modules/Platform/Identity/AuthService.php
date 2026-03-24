@@ -196,9 +196,16 @@ class AuthService
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
+                'email' => $user->email,
                 'role' => $role ?? 'super_admin',
                 'current_company_id' => $companyId ?: null,
                 'active_products' => $activeProducts,
+                'company' => $company ? [
+                    'id' => $company->id,
+                    'code' => $company->code,
+                    'name' => $company->name,
+                    'status' => $company->status,
+                ] : null,
             ],
         ];
     }
