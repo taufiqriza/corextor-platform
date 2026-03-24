@@ -154,7 +154,7 @@ export function CompanySettingsPanel({ T, isDesktop }: { T: Theme; isDesktop: bo
     }
 
     return (
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        <div style={{ width: '100%' }}>
             {/* Toast */}
             {successMsg && (
                 <div style={{ ...card({ marginBottom: 16, padding: '12px 16px', borderColor: `${T.success}50`, background: `${T.success}10` }), display: 'flex', alignItems: 'center', gap: 10 }}>
