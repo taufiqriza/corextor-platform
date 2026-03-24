@@ -19,7 +19,16 @@ export function LoginPage() {
         setError('');
         try {
             await login(email, password);
-            navigate('/admin', { replace: true });
+            // Role-based redirect
+            const user = useAuthStore.getState().user;
+            const role = user?.role ?? '';
+            if (['super_admin', 'platform_staff', 'platform_finance'].includes(role)) {
+                navigate('/admin', { replace: true });
+            } else if (role === 'company_admin') {
+                navigate('/company', { replace: true });
+            } else {
+                navigate('/employee', { replace: true });
+            }
         } catch (err: unknown) {
             const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login failed';
             setError(msg);
