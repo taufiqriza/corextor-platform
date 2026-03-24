@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-    Key, Loader2, MapPin, MoreVertical,
+    Key, Loader2, MapPin,
     RefreshCcw, Search, Trash2, UserPlus, Users, X,
 } from 'lucide-react';
 import type { Theme } from '@/theme/tokens';
@@ -13,7 +13,7 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
     const [branches, setBranches] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [menu, setMenu] = useState<number | null>(null);
+
 
     // Add Modal
     const [showAdd, setShowAdd] = useState(false);
@@ -158,7 +158,7 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
                         <p style={{ fontSize: 13, color: T.textMuted }}>{search ? 'Tidak ditemukan.' : 'Belum ada karyawan.'}</p>
                     </div>
                 ) : isDesktop ? (
-                    <div style={{ marginTop: 12, border: `1px solid ${T.border}`, borderRadius: 14, overflow: 'visible' }}>
+                    <div style={{ marginTop: 12, border: `1px solid ${T.border}`, borderRadius: 14, overflow: 'hidden' }}>
                         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 600 }}>
                             <thead><tr style={{ background: T.bgAlt }}>
                                 {['ID', 'Platform User', 'Cabang', 'Status', 'Aksi'].map(h => <th key={h} style={s.th}>{h}</th>)}
@@ -187,34 +187,27 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
                                         </div>
                                     </td>
                                     <td style={s.td}><span style={s.pill(u.status === 'active')}>{u.status}</span></td>
-                                    <td style={{ ...s.td, position: 'relative', overflow: 'visible', zIndex: menu === u.id ? 50 : 1 }}>
-                                        <div style={{ position: 'relative', display: 'inline-block' }}>
-                                            <button onClick={() => setMenu(menu === u.id ? null : u.id)} style={{ color: T.textMuted, padding: 6, borderRadius: 8 }}>
-                                                <MoreVertical size={14} />
+                                    <td style={s.td}>
+                                        <div style={{ display: 'flex', gap: 6 }}>
+                                            <button onClick={() => { setResettingPin(u); setNewPin(''); setPinMsg(''); }}
+                                                title="Reset PIN" style={{
+                                                    height: 30, padding: '0 10px', borderRadius: 8,
+                                                    border: `1px solid ${T.border}`, background: T.bgAlt,
+                                                    color: T.text, fontSize: 11, fontWeight: 700,
+                                                    display: 'flex', alignItems: 'center', gap: 5,
+                                                }}>
+                                                <Key size={11} /> Reset PIN
                                             </button>
-                                            {menu === u.id && (
-                                                <>
-                                                    <div onClick={() => setMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 49 }} />
-                                                    <div style={{
-                                                        position: 'absolute', right: 0, top: '100%', zIndex: 50,
-                                                        background: T.card, border: `1px solid ${T.border}`, borderRadius: 12,
-                                                        boxShadow: '0 12px 32px rgba(0,0,0,.25)', minWidth: 160, overflow: 'hidden',
-                                                    }}>
-                                                        <button onClick={() => { setResettingPin(u); setNewPin(''); setPinMsg(''); setMenu(null); }} style={{
-                                                            display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
-                                                            padding: '10px 14px', fontSize: 12, color: T.text, borderBottom: `1px solid ${T.border}`,
-                                                        }}><Key size={12} /> Reset PIN</button>
-                                                        <button onClick={async () => {
-                                                            if (!confirm(`Hapus karyawan ini?`)) return;
-                                                            try { await attendanceApi.deleteUser(u.id); setFeedback({ kind: 'success', msg: 'Karyawan dihapus.' }); load(); } catch {}
-                                                            setMenu(null);
-                                                        }} style={{
-                                                            display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
-                                                            padding: '10px 14px', fontSize: 12, color: T.danger,
-                                                        }}><Trash2 size={12} /> Hapus</button>
-                                                    </div>
-                                                </>
-                                            )}
+                                            <button onClick={async () => {
+                                                if (!confirm('Hapus karyawan ini?')) return;
+                                                try { await attendanceApi.deleteUser(u.id); setFeedback({ kind: 'success', msg: 'Karyawan dihapus.' }); load(); } catch {}
+                                            }} title="Hapus" style={{
+                                                width: 30, height: 30, borderRadius: 8,
+                                                border: `1px solid ${T.danger}25`, background: `${T.danger}06`,
+                                                color: T.danger, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            }}>
+                                                <Trash2 size={12} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
