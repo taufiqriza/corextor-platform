@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Building2, CheckCircle2, Clock, ClipboardList, Loader2, TrendingUp, UserCheck, Users } from 'lucide-react';
+import { Building2, Clock, ClipboardList, Loader2, TrendingUp, UserCheck, Users } from 'lucide-react';
 import type { Theme } from '@/theme/tokens';
-import { attendanceApi, platformApi } from '@/api/platform.api';
+import { attendanceApi } from '@/api/platform.api';
 
 interface Props { T: Theme; isDesktop: boolean; onNavigate: (key: string) => void; }
 

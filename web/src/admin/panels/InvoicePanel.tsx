@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-    AlertCircle, Ban, CheckCircle2, Clock, CreditCard, Eye,
+    AlertCircle, Ban, CheckCircle2, Clock,
     FileText, Loader2, MoreVertical, Plus, Receipt, RefreshCcw,
     Search, TrendingUp, X,
 } from 'lucide-react';

@@ -195,7 +195,7 @@ export function EmployeeHomeTab({ T, isDesktop, greeting, companyName }: Props) 
             {/* ═══ Check-in / Check-out Buttons ═══ */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                 <button onClick={() => handleAction('in')} disabled={status === 'checking'} style={{
-                    height: 110, borderRadius: 22, border: 'none', position: 'relative', overflow: 'hidden',
+                    height: 110, borderRadius: 22, position: 'relative', overflow: 'hidden',
                     background: hasCheckedIn
                         ? `linear-gradient(135deg, ${T.success}15, ${T.success}08)`
                         : 'linear-gradient(135deg, #22C55E, #16A34A)',
@@ -217,7 +217,7 @@ export function EmployeeHomeTab({ T, isDesktop, greeting, companyName }: Props) 
                 </button>
 
                 <button onClick={() => handleAction('out')} disabled={status === 'checking' || !hasCheckedIn} style={{
-                    height: 110, borderRadius: 22, border: 'none', position: 'relative', overflow: 'hidden',
+                    height: 110, borderRadius: 22, position: 'relative', overflow: 'hidden',
                     background: hasCheckedOut
                         ? `linear-gradient(135deg, ${T.info}15, ${T.info}08)`
                         : !hasCheckedIn
