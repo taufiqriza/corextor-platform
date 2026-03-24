@@ -20,6 +20,11 @@ class AttendanceUser extends Model
         return $this->belongsTo(Branch::class);
     }
 
+    public function platformUser()
+    {
+        return $this->belongsTo(\App\Modules\Platform\Identity\User::class, 'platform_user_id');
+    }
+
     // ── Scopes ──
 
     public function scopeActive($query)

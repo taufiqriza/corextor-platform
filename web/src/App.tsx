@@ -6,6 +6,7 @@ import { AuthGuard, GuestGuard } from '@/guards/AuthGuard';
 import { LoginPage } from '@/pages/LoginPage';
 import { PinLoginPage } from '@/pages/PinLoginPage';
 import { AdminLayout } from '@/admin/layouts/AdminLayout';
+import { CompanyAdminLayout } from '@/company/layouts/CompanyAdminLayout';
 import { EmployeeLayout } from '@/employee/layouts/EmployeeLayout';
 
 /**
@@ -16,8 +17,12 @@ function RoleRedirect() {
   const user = useAuthStore(s => s.user);
   const role = user?.role ?? '';
 
-  if (role === 'super_admin' || role === 'company_admin') {
+  if (['super_admin', 'platform_staff', 'platform_finance'].includes(role)) {
     return <Navigate to="/admin" replace />;
+  }
+
+  if (role === 'company_admin') {
+    return <Navigate to="/company" replace />;
   }
 
   return <Navigate to="/employee" replace />;
@@ -35,6 +40,7 @@ function AppRoutes() {
 
       {/* Protected routes */}
       <Route path="/admin" element={<AuthGuard><AdminLayout /></AuthGuard>} />
+      <Route path="/company" element={<AuthGuard><CompanyAdminLayout /></AuthGuard>} />
       <Route path="/employee" element={<AuthGuard><EmployeeLayout /></AuthGuard>} />
 
       {/* Fallback — redirect to correct portal based on role */}

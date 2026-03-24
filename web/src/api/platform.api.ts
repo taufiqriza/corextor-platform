@@ -101,6 +101,10 @@ export const attendanceApi = {
     getUsers: () => api.get('/attendance/v1/users'),
     createUser: (data: { platform_user_id: number; branch_id: number; pin: string }) =>
         api.post('/attendance/v1/users', data),
+    updateUser: (id: number, data: { branch_id?: number; status?: string }) =>
+        api.put(`/attendance/v1/users/${id}`, data),
+    deleteUser: (id: number) =>
+        api.delete(`/attendance/v1/users/${id}`),
     resetPin: (id: number, pin: string) =>
         api.post(`/attendance/v1/users/${id}/reset-pin`, { pin }),
 

@@ -14,7 +14,7 @@ class AttendanceUserService
     public static function listByCompany(int $companyId): Collection
     {
         return AttendanceUser::forCompany($companyId)
-            ->with('branch')
+            ->with(['branch', 'platformUser'])
             ->orderBy('platform_user_id')
             ->get();
     }
