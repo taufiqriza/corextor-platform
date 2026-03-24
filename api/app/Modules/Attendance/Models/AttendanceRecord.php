@@ -33,6 +33,14 @@ class AttendanceRecord extends Model
         return $this->belongsTo(Branch::class);
     }
 
+    /**
+     * Cross-database relation to platform user (for name/email).
+     */
+    public function platformUser()
+    {
+        return $this->belongsTo(\App\Modules\Platform\Identity\User::class, 'platform_user_id');
+    }
+
     // ── Scopes ──
 
     public function scopeForCompany($query, int $companyId)

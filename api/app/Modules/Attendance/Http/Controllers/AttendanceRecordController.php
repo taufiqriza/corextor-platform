@@ -85,7 +85,32 @@ class AttendanceRecordController extends Controller
             branchId: $request->query('branch_id'),
         );
 
-        return ApiResponse::success($records);
+        $stats = AttendanceRecordService::companyReportStats(
+            companyId: $companyId,
+            from: $request->query('from'),
+            to: $request->query('to'),
+        );
+
+        $data = $records->map(fn ($r) => [
+            'id'                 => $r->id,
+            'attendance_user_id' => $r->attendance_user_id,
+            'platform_user_id'   => $r->platform_user_id,
+            'company_id'         => $r->company_id,
+            'branch_id'          => $r->branch_id,
+            'date'               => $r->date?->format('Y-m-d'),
+            'time_in'            => $r->time_in,
+            'time_out'           => $r->time_out,
+            'status'             => $r->status,
+            'note'               => $r->note,
+            'employee_name'      => $r->platformUser?->name ?? 'Unknown',
+            'employee_email'     => $r->platformUser?->email,
+            'branch_name'        => $r->branch?->name,
+        ]);
+
+        return ApiResponse::success([
+            'stats'   => $stats,
+            'records' => $data,
+        ]);
     }
 
     /**

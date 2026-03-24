@@ -5,6 +5,7 @@ namespace App\Modules\Attendance\Services;
 use App\Modules\Attendance\Models\AttendanceRecord;
 use App\Modules\Attendance\Models\AttendanceUser;
 use App\Modules\Platform\Audit\AuditService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class AttendanceRecordService
@@ -124,18 +125,41 @@ class AttendanceRecordService
         ?string $from = null,
         ?string $to = null,
         ?int $branchId = null,
-        int $perPage = 30,
-    ): LengthAwarePaginator {
+    ): Collection {
         $from = $from ?? now()->startOfMonth()->toDateString();
         $to = $to ?? now()->toDateString();
 
         return AttendanceRecord::forCompany($companyId)
             ->dateRange($from, $to)
             ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
-            ->with('branch')
+            ->with(['branch', 'platformUser', 'attendanceUser'])
             ->orderByDesc('date')
             ->orderBy('time_in')
-            ->paginate($perPage);
+            ->get();
+    }
+
+    /**
+     * Stats for attendance report.
+     */
+    public static function companyReportStats(
+        int $companyId,
+        ?string $from = null,
+        ?string $to = null,
+    ): array {
+        $from = $from ?? now()->startOfMonth()->toDateString();
+        $to = $to ?? now()->toDateString();
+
+        $records = AttendanceRecord::forCompany($companyId)
+            ->dateRange($from, $to)
+            ->get();
+
+        return [
+            'total'     => $records->count(),
+            'present'   => $records->where('status', 'present')->count(),
+            'corrected' => $records->where('status', 'corrected')->count(),
+            'complete'  => $records->whereNotNull('time_out')->count(),
+            'ongoing'   => $records->whereNull('time_out')->whereNotNull('time_in')->count(),
+        ];
     }
 
     /**
