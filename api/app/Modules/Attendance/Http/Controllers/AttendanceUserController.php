@@ -89,7 +89,12 @@ class AttendanceUserController extends Controller
         ]);
 
         $companyId = $request->attributes->get('auth_company_id');
-        PinService::resetPin($id, $companyId, $request->input('pin'));
-        return ApiResponse::success(message: 'PIN reset successful');
+
+        try {
+            PinService::resetPin($id, $companyId, $request->input('pin'));
+            return ApiResponse::success(message: 'PIN reset successful');
+        } catch (\RuntimeException $e) {
+            return ApiResponse::conflict($e->getMessage());
+        }
     }
 }

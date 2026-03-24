@@ -46,10 +46,20 @@ class PinService
     {
         $attendanceUser = AttendanceUser::forCompany($companyId)->findOrFail($attendanceUserId);
 
+        // Check if PIN is already in use by another user (global uniqueness)
+        $globalLookup = self::generateGlobalPinLookup($newPin);
+        $existing = AttendanceUser::where('global_pin_lookup', $globalLookup)
+            ->where('id', '!=', $attendanceUser->id)
+            ->first();
+
+        if ($existing) {
+            throw new \RuntimeException('PIN ini sudah digunakan oleh karyawan lain. Silakan gunakan PIN yang berbeda.');
+        }
+
         $attendanceUser->update([
             'pin_hash' => self::hashPin($newPin),
             'pin_lookup' => self::generatePinLookup($companyId, $newPin),
-            'global_pin_lookup' => self::generateGlobalPinLookup($newPin),
+            'global_pin_lookup' => $globalLookup,
         ]);
 
         AuditService::attendance('attendance_user.pin_reset', [

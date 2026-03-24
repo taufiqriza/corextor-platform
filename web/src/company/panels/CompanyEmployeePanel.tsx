@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-    Key, Loader2, MapPin, MoreVertical, Pencil, Plus,
+    Key, Loader2, MapPin, MoreVertical,
     RefreshCcw, Search, Trash2, UserPlus, Users, X,
 } from 'lucide-react';
 import type { Theme } from '@/theme/tokens';
@@ -24,9 +24,7 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
     const [addError, setAddError] = useState('');
 
     // Edit Modal
-    const [editing, setEditing] = useState<any>(null);
-    const [editBranch, setEditBranch] = useState('');
-    const [editSaving, setEditSaving] = useState(false);
+
 
     // Reset PIN
     const [resettingPin, setResettingPin] = useState<any>(null);
@@ -72,12 +70,16 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
 
     const handleResetPin = async () => {
         if (!resettingPin || !newPin) return;
+        if (newPin.length < 4) { setPinMsg('PIN minimal 4 digit.'); return; }
         setPinSaving(true); setPinMsg('');
         try {
             await attendanceApi.resetPin(resettingPin.id, newPin);
             setPinMsg('PIN berhasil direset!');
-            setTimeout(() => { setResettingPin(null); setPinMsg(''); }, 1200);
-        } catch (err: any) { setPinMsg(err?.response?.data?.message ?? 'Gagal reset PIN'); }
+            setTimeout(() => { setResettingPin(null); setPinMsg(''); setNewPin(''); load(); }, 1200);
+        } catch (err: any) {
+            const msg = err?.response?.data?.message ?? 'Gagal reset PIN';
+            setPinMsg(msg);
+        }
         finally { setPinSaving(false); }
     };
 
@@ -156,7 +158,7 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
                         <p style={{ fontSize: 13, color: T.textMuted }}>{search ? 'Tidak ditemukan.' : 'Belum ada karyawan.'}</p>
                     </div>
                 ) : isDesktop ? (
-                    <div style={{ marginTop: 12, border: `1px solid ${T.border}`, borderRadius: 14, overflowX: 'auto' }}>
+                    <div style={{ marginTop: 12, border: `1px solid ${T.border}`, borderRadius: 14, overflow: 'visible' }}>
                         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 600 }}>
                             <thead><tr style={{ background: T.bgAlt }}>
                                 {['ID', 'Platform User', 'Cabang', 'Status', 'Aksi'].map(h => <th key={h} style={s.th}>{h}</th>)}
@@ -185,30 +187,33 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
                                         </div>
                                     </td>
                                     <td style={s.td}><span style={s.pill(u.status === 'active')}>{u.status}</span></td>
-                                    <td style={{ ...s.td, position: 'relative' }}>
+                                    <td style={{ ...s.td, position: 'relative', overflow: 'visible', zIndex: menu === u.id ? 50 : 1 }}>
                                         <div style={{ position: 'relative', display: 'inline-block' }}>
                                             <button onClick={() => setMenu(menu === u.id ? null : u.id)} style={{ color: T.textMuted, padding: 6, borderRadius: 8 }}>
                                                 <MoreVertical size={14} />
                                             </button>
                                             {menu === u.id && (
-                                                <div style={{
-                                                    position: 'absolute', right: 0, top: '100%', zIndex: 20,
-                                                    background: T.card, border: `1px solid ${T.border}`, borderRadius: 12,
-                                                    boxShadow: '0 8px 24px rgba(0,0,0,.15)', minWidth: 150, overflow: 'hidden',
-                                                }}>
-                                                    <button onClick={() => { setResettingPin(u); setNewPin(''); setPinMsg(''); setMenu(null); }} style={{
-                                                        display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
-                                                        padding: '10px 14px', fontSize: 12, color: T.text, borderBottom: `1px solid ${T.border}`,
-                                                    }}><Key size={12} /> Reset PIN</button>
-                                                    <button onClick={async () => {
-                                                        if (!confirm(`Hapus karyawan ini?`)) return;
-                                                        try { await attendanceApi.deleteUser(u.id); setFeedback({ kind: 'success', msg: 'Karyawan dihapus.' }); load(); } catch {}
-                                                        setMenu(null);
-                                                    }} style={{
-                                                        display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
-                                                        padding: '10px 14px', fontSize: 12, color: T.danger,
-                                                    }}><Trash2 size={12} /> Hapus</button>
-                                                </div>
+                                                <>
+                                                    <div onClick={() => setMenu(null)} style={{ position: 'fixed', inset: 0, zIndex: 49 }} />
+                                                    <div style={{
+                                                        position: 'absolute', right: 0, top: '100%', zIndex: 50,
+                                                        background: T.card, border: `1px solid ${T.border}`, borderRadius: 12,
+                                                        boxShadow: '0 12px 32px rgba(0,0,0,.25)', minWidth: 160, overflow: 'hidden',
+                                                    }}>
+                                                        <button onClick={() => { setResettingPin(u); setNewPin(''); setPinMsg(''); setMenu(null); }} style={{
+                                                            display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
+                                                            padding: '10px 14px', fontSize: 12, color: T.text, borderBottom: `1px solid ${T.border}`,
+                                                        }}><Key size={12} /> Reset PIN</button>
+                                                        <button onClick={async () => {
+                                                            if (!confirm(`Hapus karyawan ini?`)) return;
+                                                            try { await attendanceApi.deleteUser(u.id); setFeedback({ kind: 'success', msg: 'Karyawan dihapus.' }); load(); } catch {}
+                                                            setMenu(null);
+                                                        }} style={{
+                                                            display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left',
+                                                            padding: '10px 14px', fontSize: 12, color: T.danger,
+                                                        }}><Trash2 size={12} /> Hapus</button>
+                                                    </div>
+                                                </>
                                             )}
                                         </div>
                                     </td>
