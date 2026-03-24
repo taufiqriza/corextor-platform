@@ -28,10 +28,13 @@ class BranchController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'location' => 'nullable|string|max:500',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'radius_meters' => 'nullable|integer|min:10|max:5000',
         ]);
 
         $companyId = $request->attributes->get('auth_company_id');
-        $branch = BranchService::create($companyId, $request->only('name', 'location'));
+        $branch = BranchService::create($companyId, $request->only('name', 'location', 'latitude', 'longitude', 'radius_meters'));
         return ApiResponse::created($branch);
     }
 
@@ -53,11 +56,14 @@ class BranchController extends Controller
         $request->validate([
             'name' => 'sometimes|string|max:255',
             'location' => 'sometimes|nullable|string|max:500',
+            'latitude' => 'sometimes|nullable|numeric|between:-90,90',
+            'longitude' => 'sometimes|nullable|numeric|between:-180,180',
+            'radius_meters' => 'sometimes|nullable|integer|min:10|max:5000',
             'status' => 'sometimes|in:active,inactive',
         ]);
 
         $companyId = $request->attributes->get('auth_company_id');
-        $branch = BranchService::update($id, $companyId, $request->only('name', 'location', 'status'));
+        $branch = BranchService::update($id, $companyId, $request->only('name', 'location', 'latitude', 'longitude', 'radius_meters', 'status'));
         return ApiResponse::success($branch);
     }
 

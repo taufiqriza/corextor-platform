@@ -8,7 +8,13 @@ class Branch extends Model
 {
     protected $connection = 'attendance';
 
-    protected $fillable = ['company_id', 'name', 'location', 'status'];
+    protected $fillable = ['company_id', 'name', 'location', 'latitude', 'longitude', 'radius_meters', 'status'];
+
+    protected $casts = [
+        'latitude' => 'float',
+        'longitude' => 'float',
+        'radius_meters' => 'integer',
+    ];
 
     public function attendanceUsers()
     {

@@ -35,6 +35,9 @@ class BranchService
             'company_id' => $companyId,
             'name' => $data['name'],
             'location' => $data['location'] ?? null,
+            'latitude' => $data['latitude'] ?? null,
+            'longitude' => $data['longitude'] ?? null,
+            'radius_meters' => $data['radius_meters'] ?? 100,
             'status' => $data['status'] ?? 'active',
         ]);
 
@@ -53,11 +56,12 @@ class BranchService
     {
         $branch = Branch::forCompany($companyId)->findOrFail($id);
 
-        $branch->update(array_filter([
-            'name' => $data['name'] ?? null,
-            'location' => $data['location'] ?? null,
-            'status' => $data['status'] ?? null,
-        ], fn ($v) => $v !== null));
+        $allowedFields = ['name', 'location', 'latitude', 'longitude', 'radius_meters', 'status'];
+        $updates = array_intersect_key($data, array_flip($allowedFields));
+
+        if (! empty($updates)) {
+            $branch->update($updates);
+        }
 
         AuditService::attendance('branch.updated', [
             'branch_id' => $branch->id,

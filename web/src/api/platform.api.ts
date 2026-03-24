@@ -103,9 +103,9 @@ export const platformApi = {
 export const attendanceApi = {
     // Branches
     getBranches: () => api.get('/attendance/v1/branches'),
-    createBranch: (data: { name: string; location?: string }) =>
+    createBranch: (data: { name: string; location?: string; latitude?: number; longitude?: number; radius_meters?: number }) =>
         api.post('/attendance/v1/branches', data),
-    updateBranch: (id: number, data: { name: string; location?: string }) =>
+    updateBranch: (id: number, data: { name?: string; location?: string; latitude?: number; longitude?: number; radius_meters?: number; status?: string }) =>
         api.put(`/attendance/v1/branches/${id}`, data),
     deleteBranch: (id: number) =>
         api.delete(`/attendance/v1/branches/${id}`),
