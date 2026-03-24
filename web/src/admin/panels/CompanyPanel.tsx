@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import {
     ArrowLeft, Building2, CheckCircle2, ChevronRight, Loader2, MapPin,
-    Package, PencilLine, Plus, RefreshCcw, Search, Users, X,
+    MoreVertical, Package, PencilLine, Plus, RefreshCcw, Search, UserPlus, Users, X,
 } from 'lucide-react';
 import type { Theme } from '@/theme/tokens';
 import { platformApi } from '@/api/platform.api';
@@ -88,6 +88,16 @@ export function CompanyPanel({ T, isDesktop }: Props) {
     const [addingSubscription, setAddingSubscription] = useState(false);
     const [addSubError, setAddSubError] = useState('');
 
+    // Member management
+    const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+    const [memberName, setMemberName] = useState('');
+    const [memberEmail, setMemberEmail] = useState('');
+    const [memberRole, setMemberRole] = useState<'company_admin' | 'employee'>('employee');
+    const [addingMember, setAddingMember] = useState(false);
+    const [addMemberError, setAddMemberError] = useState('');
+    const [memberMenu, setMemberMenu] = useState<number | null>(null);
+    const [memberStats, setMemberStats] = useState({ total: 0, admins: 0, employees: 0, active: 0 });
+
     // Feedback
     const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; msg: string } | null>(null);
 
@@ -139,10 +149,16 @@ export function CompanyPanel({ T, isDesktop }: Props) {
         finally { setSubsLoading(false); }
 
         // Load members
+        loadMembers(company.id);
+    };
+
+    const loadMembers = async (companyId: number) => {
         setMembersLoading(true);
         try {
-            const res = await platformApi.getCompanyMembers(company.id);
-            setMembers(res.data?.data ?? []);
+            const res = await platformApi.getCompanyMembers(companyId);
+            const data = res.data?.data ?? {};
+            setMembers(data.members ?? data ?? []);
+            if (data.stats) setMemberStats(data.stats);
         } catch { setMembers([]); }
         finally { setMembersLoading(false); }
     };
@@ -390,8 +406,14 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <div style={s.sectionIcon}><Users size={14} /></div>
-                                <span style={s.sectionTitle}>Members</span>
+                                <div>
+                                    <span style={s.sectionTitle}>Members</span>
+                                    <div style={{ fontSize: 11, color: T.textMuted }}>{memberStats.admins} admin • {memberStats.employees} karyawan</div>
+                                </div>
                             </div>
+                            <button onClick={() => { setShowAddMemberModal(true); setAddMemberError(''); setMemberName(''); setMemberEmail(''); setMemberRole('employee'); }} style={s.primaryBtn}>
+                                <UserPlus size={13} /> Tambah
+                            </button>
                         </div>
                         {membersLoading ? (
                             <div style={{ padding: 28, textAlign: 'center', color: T.textMuted, fontSize: 12 }}>
@@ -404,13 +426,15 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                             <div style={{ border: `1px solid ${T.border}`, borderRadius: 14, overflowX: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 500 }}>
                                     <thead><tr style={{ background: T.bgAlt }}>
-                                        {['Member', 'Email', 'Role', 'Status'].map(h => (
+                                        {['Member', 'Email', 'Role', 'Status', ''].map(h => (
                                             <th key={h} style={s.thCell}>{h}</th>
                                         ))}
                                     </tr></thead>
                                     <tbody>
                                         {members.map(m => (
-                                            <tr key={m.id} style={{ background: T.card }}>
+                                            <tr key={m.id} style={{ background: T.card, transition: 'background .15s' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = T.bgAlt}
+                                                onMouseLeave={e => e.currentTarget.style.background = T.card}>
                                                 <td style={s.tdCell}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                                         <div style={{
@@ -437,6 +461,46 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                                                     </span>
                                                 </td>
                                                 <td style={s.tdCell}><span style={s.pill(m.status === 'active')}>{m.status}</span></td>
+                                                <td style={{ ...s.tdCell, textAlign: 'right', position: 'relative' }}>
+                                                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                                                        <button onClick={() => setMemberMenu(memberMenu === m.id ? null : m.id)}
+                                                            style={{ color: T.textMuted, padding: 6, borderRadius: 8 }}>
+                                                            <MoreVertical size={14} />
+                                                        </button>
+                                                        {memberMenu === m.id && (
+                                                            <div style={{
+                                                                position: 'absolute', right: 0, top: '100%', zIndex: 20,
+                                                                background: T.card, border: `1px solid ${T.border}`, borderRadius: 12,
+                                                                boxShadow: '0 8px 24px rgba(0,0,0,.15)', minWidth: 160, overflow: 'hidden',
+                                                            }}>
+                                                                <button onClick={async () => {
+                                                                    const newRole = m.role === 'company_admin' ? 'employee' : 'company_admin';
+                                                                    try { await platformApi.updateCompanyMember(selected!.id, m.id, { role: newRole }); loadMembers(selected!.id); } catch {}
+                                                                    setMemberMenu(null);
+                                                                }} style={{
+                                                                    display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px',
+                                                                    fontSize: 12, color: T.text, borderBottom: `1px solid ${T.border}`,
+                                                                }}>{m.role === 'company_admin' ? 'Jadikan Employee' : 'Jadikan Admin'}</button>
+                                                                <button onClick={async () => {
+                                                                    const newStatus = m.status === 'active' ? 'suspended' : 'active';
+                                                                    try { await platformApi.updateCompanyMember(selected!.id, m.id, { status: newStatus }); loadMembers(selected!.id); } catch {}
+                                                                    setMemberMenu(null);
+                                                                }} style={{
+                                                                    display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px',
+                                                                    fontSize: 12, color: m.status === 'active' ? T.gold : T.success, borderBottom: `1px solid ${T.border}`,
+                                                                }}>{m.status === 'active' ? 'Suspend' : 'Aktifkan'}</button>
+                                                                <button onClick={async () => {
+                                                                    if (!confirm(`Hapus ${m.user?.name ?? 'member'} dari company?`)) return;
+                                                                    try { await platformApi.removeCompanyMember(selected!.id, m.id); loadMembers(selected!.id); } catch {}
+                                                                    setMemberMenu(null);
+                                                                }} style={{
+                                                                    display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px',
+                                                                    fontSize: 12, color: T.danger,
+                                                                }}>Hapus Member</button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -462,9 +526,11 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                                                     <div style={{ fontSize: 10, color: T.textMuted, marginTop: 2 }}>{m.user?.email ?? '-'}</div>
                                                 </div>
                                             </div>
-                                            <span style={s.pill(m.status === 'active')}>{m.status}</span>
+                                            <button onClick={() => setMemberMenu(memberMenu === m.id ? null : m.id)} style={{ color: T.textMuted, padding: 4 }}>
+                                                <MoreVertical size={14} />
+                                            </button>
                                         </div>
-                                        <div style={{ marginTop: 8 }}>
+                                        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                                             <span style={{
                                                 fontSize: 10, fontWeight: 800, padding: '3px 9px', borderRadius: 999,
                                                 background: m.role === 'company_admin' ? `${T.gold}16` : `${T.info}14`,
@@ -472,10 +538,112 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                                             }}>
                                                 {m.role === 'company_admin' ? 'Admin' : 'Employee'}
                                             </span>
+                                            <span style={s.pill(m.status === 'active')}>{m.status}</span>
                                         </div>
+                                        {memberMenu === m.id && (
+                                            <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                                                <button onClick={async () => {
+                                                    const newRole = m.role === 'company_admin' ? 'employee' : 'company_admin';
+                                                    try { await platformApi.updateCompanyMember(selected!.id, m.id, { role: newRole }); loadMembers(selected!.id); } catch {}
+                                                    setMemberMenu(null);
+                                                }} style={{ height: 30, padding: '0 10px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.bgAlt, color: T.text, fontSize: 11, fontWeight: 700 }}>
+                                                    {m.role === 'company_admin' ? '→ Employee' : '→ Admin'}
+                                                </button>
+                                                <button onClick={async () => {
+                                                    const newStatus = m.status === 'active' ? 'suspended' : 'active';
+                                                    try { await platformApi.updateCompanyMember(selected!.id, m.id, { status: newStatus }); loadMembers(selected!.id); } catch {}
+                                                    setMemberMenu(null);
+                                                }} style={{ height: 30, padding: '0 10px', borderRadius: 8, border: `1px solid ${T.border}`, background: T.bgAlt, color: T.gold, fontSize: 11, fontWeight: 700 }}>
+                                                    {m.status === 'active' ? 'Suspend' : 'Aktifkan'}
+                                                </button>
+                                                <button onClick={async () => {
+                                                    if (!confirm(`Hapus ${m.user?.name ?? 'member'}?`)) return;
+                                                    try { await platformApi.removeCompanyMember(selected!.id, m.id); loadMembers(selected!.id); } catch {}
+                                                    setMemberMenu(null);
+                                                }} style={{ height: 30, padding: '0 10px', borderRadius: 8, border: `1px solid ${T.danger}30`, background: `${T.danger}08`, color: T.danger, fontSize: 11, fontWeight: 700 }}>
+                                                    Hapus
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
+                        )}
+
+                        {/* Add Member Modal */}
+                        {showAddMemberModal && (
+                            <>
+                                <div onClick={() => setShowAddMemberModal(false)} style={s.overlay} />
+                                <div style={s.modalFrame}>
+                                    <div style={s.modalDialog(440)} onClick={e => e.stopPropagation()}>
+                                        <div style={s.modalHeader}>
+                                            <div>
+                                                <div style={{ fontSize: 15, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif" }}>Tambah Member</div>
+                                                <div style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}>Masukkan email user baru atau yang sudah terdaftar.</div>
+                                            </div>
+                                            <button onClick={() => setShowAddMemberModal(false)} style={s.modalClose}><X size={14} /></button>
+                                        </div>
+                                        <div style={s.modalBody}>
+                                            {addMemberError && (
+                                                <div style={{ padding: '10px 14px', borderRadius: 12, background: `${T.danger}12`, border: `1px solid ${T.danger}30`, color: T.danger, fontSize: 12, fontWeight: 600 }}>
+                                                    {addMemberError}
+                                                </div>
+                                            )}
+                                            <div>
+                                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Email</label>
+                                                <input value={memberEmail} onChange={e => setMemberEmail(e.target.value)} placeholder="email@company.com" required type="email"
+                                                    style={{ width: '100%', height: 44, borderRadius: 11, border: `1px solid ${T.border}`, background: T.bgAlt, padding: '0 14px', fontSize: 13, color: T.text, boxSizing: 'border-box' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Nama (opsional untuk user baru)</label>
+                                                <input value={memberName} onChange={e => setMemberName(e.target.value)} placeholder="Nama lengkap"
+                                                    style={{ width: '100%', height: 44, borderRadius: 11, border: `1px solid ${T.border}`, background: T.bgAlt, padding: '0 14px', fontSize: 13, color: T.text, boxSizing: 'border-box' }} />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Role</label>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                                                    {[
+                                                        { value: 'employee' as const, label: 'Employee', desc: 'Karyawan biasa', tone: T.info },
+                                                        { value: 'company_admin' as const, label: 'Admin', desc: 'Admin perusahaan', tone: T.gold },
+                                                    ].map(r => (
+                                                        <button key={r.value} onClick={() => setMemberRole(r.value)} style={{
+                                                            padding: '12px 14px', borderRadius: 12, textAlign: 'left',
+                                                            background: memberRole === r.value ? `${r.tone}10` : T.bgAlt,
+                                                            border: `2px solid ${memberRole === r.value ? r.tone : T.border}`,
+                                                            cursor: 'pointer',
+                                                        }}>
+                                                            <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{r.label}</div>
+                                                            <div style={{ fontSize: 10, color: T.textMuted, marginTop: 2 }}>{r.desc}</div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: `1px solid ${T.border}`, paddingTop: 14 }}>
+                                                <button onClick={() => setShowAddMemberModal(false)} style={{ height: 38, borderRadius: 11, border: `1px solid ${T.border}`, background: T.bgAlt, color: T.textSub, fontSize: 12, fontWeight: 700, padding: '0 14px' }}>
+                                                    Batal
+                                                </button>
+                                                <button onClick={async () => {
+                                                    if (!memberEmail.trim() || !selected) return;
+                                                    setAddingMember(true); setAddMemberError('');
+                                                    try {
+                                                        await platformApi.addCompanyMember(selected.id, {
+                                                            email: memberEmail, name: memberName || undefined, role: memberRole,
+                                                        });
+                                                        setShowAddMemberModal(false);
+                                                        setFeedback({ kind: 'success', msg: 'Member berhasil ditambahkan!' });
+                                                        loadMembers(selected.id);
+                                                    } catch (err) { setAddMemberError(getErrorMsg(err)); }
+                                                    finally { setAddingMember(false); }
+                                                }} disabled={!memberEmail.trim() || addingMember}
+                                                    style={{ ...s.primaryBtn, height: 38, opacity: (!memberEmail.trim() || addingMember) ? .5 : 1 }}>
+                                                    {addingMember ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <UserPlus size={13} />}
+                                                    {addingMember ? 'Menambahkan...' : 'Tambah Member'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
                         )}
                     </div>
                 )}
