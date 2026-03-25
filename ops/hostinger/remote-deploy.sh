@@ -9,6 +9,19 @@ log() {
     printf '[%s] %s\n' "$(timestamp)" "$*"
 }
 
+ensure_storage_symlink() {
+    local public_dir="$1"
+    local storage_target="$2"
+    local public_storage_path="$public_dir/storage"
+
+    if [ -L "$public_storage_path" ] || [ -e "$public_storage_path" ]; then
+        rm -rf "$public_storage_path"
+    fi
+
+    ln -sfn "$storage_target" "$public_storage_path"
+    log "Ensured public storage symlink: $public_storage_path -> $storage_target"
+}
+
 require_cmd() {
     command -v "$1" >/dev/null 2>&1 || {
         log "Required command not found: $1"
@@ -65,8 +78,9 @@ switch_docroot() {
 
 DEPLOY_BASE="${DEPLOY_BASE:-/home/u435085854/deploy/corextor-platform}"
 RELEASE_ID="${RELEASE_ID:?RELEASE_ID is required}"
-REPO_URL="${REPO_URL:?REPO_URL is required}"
+REPO_URL="${REPO_URL:-}"
 REPO_REF="${REPO_REF:-main}"
+SOURCE_ARCHIVE="${SOURCE_ARCHIVE:-}"
 WEB_ARTIFACT="${WEB_ARTIFACT:?WEB_ARTIFACT is required}"
 API_ENV_PATH="${API_ENV_PATH:-$DEPLOY_BASE/shared/api/.env}"
 PRIMARY_DOCROOT="${PRIMARY_DOCROOT:-}"
@@ -80,13 +94,19 @@ WEB_RELEASE_DIR="$DEPLOY_BASE/releases/web-$RELEASE_ID"
 DOCROOT_RELEASE_DIR="$DEPLOY_BASE/releases/docroot-$RELEASE_ID"
 CURRENT_LINK="$DEPLOY_BASE/current"
 CURRENT_WEB_LINK="$DEPLOY_BASE/current-web"
+CANDIDATE_LINK="$DEPLOY_BASE/candidate"
+CANDIDATE_WEB_LINK="$DEPLOY_BASE/candidate-web"
 SHARED_API_DIR="$DEPLOY_BASE/shared/api"
 SHARED_STORAGE_DIR="$SHARED_API_DIR/storage"
 
-require_cmd git
 require_cmd tar
 require_cmd composer
 require_cmd php
+
+if [ -z "$SOURCE_ARCHIVE" ] && [ -z "$REPO_URL" ]; then
+    log "Either SOURCE_ARCHIVE or REPO_URL must be provided"
+    exit 1
+fi
 
 ensure_dir "$DEPLOY_BASE/artifacts"
 ensure_dir "$DEPLOY_BASE/releases"
@@ -99,6 +119,10 @@ ensure_dir "$SHARED_STORAGE_DIR/logs"
 
 require_file "$WEB_ARTIFACT"
 require_file "$API_ENV_PATH"
+
+if [ -n "$SOURCE_ARCHIVE" ]; then
+    require_file "$SOURCE_ARCHIVE"
+fi
 
 if [ -e "$RELEASE_DIR" ] || [ -L "$RELEASE_DIR" ]; then
     log "Release directory already exists: $RELEASE_DIR"
@@ -115,8 +139,15 @@ if [ -e "$DOCROOT_RELEASE_DIR" ] || [ -L "$DOCROOT_RELEASE_DIR" ]; then
     exit 1
 fi
 
-log "Cloning $REPO_REF from $REPO_URL"
-git clone --depth 1 --branch "$REPO_REF" "$REPO_URL" "$RELEASE_DIR"
+if [ -n "$SOURCE_ARCHIVE" ]; then
+    log "Extracting source archive into $RELEASE_DIR"
+    mkdir -p "$RELEASE_DIR"
+    tar -xzf "$SOURCE_ARCHIVE" -C "$RELEASE_DIR"
+else
+    require_cmd git
+    log "Cloning $REPO_REF from $REPO_URL"
+    git clone --depth 1 --branch "$REPO_REF" "$REPO_URL" "$RELEASE_DIR"
+fi
 
 log "Linking shared API environment"
 ln -sfn "$API_ENV_PATH" "$RELEASE_DIR/api/.env"
@@ -144,6 +175,8 @@ log "Preparing API application"
     php artisan route:cache
 )
 
+ensure_storage_symlink "$RELEASE_DIR/api/public" "$RELEASE_DIR/api/storage/app/public"
+
 log "Extracting frontend artifact"
 mkdir -p "$WEB_RELEASE_DIR"
 tar -xzf "$WEB_ARTIFACT" -C "$WEB_RELEASE_DIR"
@@ -152,17 +185,20 @@ log "Assembling Hostinger docroot release"
 mkdir -p "$DOCROOT_RELEASE_DIR/$EMPLOYEE_SUBDIR_NAME"
 cp -a "$WEB_RELEASE_DIR/." "$DOCROOT_RELEASE_DIR/"
 cp -a "$WEB_RELEASE_DIR/." "$DOCROOT_RELEASE_DIR/$EMPLOYEE_SUBDIR_NAME/"
-ln -sfn "$CURRENT_LINK/api/public" "$DOCROOT_RELEASE_DIR/$API_SUBDIR_NAME"
+ln -sfn "$RELEASE_DIR/api/public" "$DOCROOT_RELEASE_DIR/$API_SUBDIR_NAME"
 
-ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
-ln -sfn "$DOCROOT_RELEASE_DIR" "$CURRENT_WEB_LINK"
-log "Updated current release symlinks"
+ln -sfn "$RELEASE_DIR" "$CANDIDATE_LINK"
+ln -sfn "$DOCROOT_RELEASE_DIR" "$CANDIDATE_WEB_LINK"
+log "Updated candidate release symlinks"
 
 if [ "$SWITCH_DOCROOTS" = "1" ]; then
+    ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
+    ln -sfn "$DOCROOT_RELEASE_DIR" "$CURRENT_WEB_LINK"
+    log "Promoted candidate release to current"
     log "Switching live Hostinger primary docroot"
     switch_docroot "primary" "$PRIMARY_DOCROOT" "$CURRENT_WEB_LINK"
 else
-    log "SWITCH_DOCROOTS=0, leaving live docroots unchanged"
+    log "SWITCH_DOCROOTS=0, candidate prepared without touching live current symlinks"
 fi
 
 log "Remote deployment finished successfully"
