@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Building2, Save, Users, Shield, Crown, Mail, Phone,
     MapPin, Briefcase, ChevronRight, Check, AlertTriangle,
-    Loader2, Pencil, X,
+    Loader2, Pencil, Trash2, UploadCloud, X,
 } from 'lucide-react';
 import type { Theme } from '@/theme/tokens';
 import { platformApi } from '@/api/platform.api';
 import { useAuthStore } from '@/store/authStore';
+import { normalizePublicAssetUrl } from '@/lib/publicAsset';
 
 /* ═══ Types ═══ */
 type CompanyProfile = {
@@ -43,6 +44,7 @@ type ActiveSection = 'profile' | 'team' | 'security';
 /* ═══ Settings Panel ═══ */
 export function CompanySettingsPanel({ T, isDesktop }: { T: Theme; isDesktop: boolean }) {
     const user = useAuthStore(s => s.user);
+    const fetchMe = useAuthStore(s => s.fetchMe);
 
     const [activeSection, setActiveSection] = useState<ActiveSection>('profile');
     const [company, setCompany] = useState<CompanyProfile | null>(null);
@@ -56,6 +58,9 @@ export function CompanySettingsPanel({ T, isDesktop }: { T: Theme; isDesktop: bo
     // Editable profile
     const [editMode, setEditMode] = useState(false);
     const [form, setForm] = useState({ name: '', address: '', phone: '', email: '', industry: '' });
+    const [logoUploading, setLogoUploading] = useState(false);
+    const [logoRemoving, setLogoRemoving] = useState(false);
+    const logoInputRef = useRef<HTMLInputElement | null>(null);
 
     // Role change modal
     const [roleModal, setRoleModal] = useState<Member | null>(null);
@@ -65,7 +70,10 @@ export function CompanySettingsPanel({ T, isDesktop }: { T: Theme; isDesktop: bo
         try {
             const res = await platformApi.getMyProfile();
             const d = res.data.data;
-            setCompany(d.company);
+            setCompany(d.company ? {
+                ...d.company,
+                logo_url: normalizePublicAssetUrl(d.company.logo_url),
+            } : null);
             setStats(d.stats);
             setForm({
                 name: d.company.name ?? '',
@@ -115,6 +123,58 @@ export function CompanySettingsPanel({ T, isDesktop }: { T: Theme; isDesktop: bo
         } catch {
             setErrorMsg('Gagal mengubah role.');
             setTimeout(() => setErrorMsg(''), 4000);
+        }
+    };
+
+    const handleLogoSelect = () => {
+        if (logoUploading || logoRemoving) return;
+        logoInputRef.current?.click();
+    };
+
+    const handleLogoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setLogoUploading(true);
+        setSuccessMsg('');
+        setErrorMsg('');
+
+        try {
+            const formData = new FormData();
+            formData.append('logo', file);
+            await platformApi.updateMyCompanyLogo(formData);
+            await fetchProfile();
+            await fetchMe();
+            setSuccessMsg('Logo perusahaan berhasil diperbarui!');
+            setTimeout(() => setSuccessMsg(''), 3000);
+        } catch {
+            setErrorMsg('Gagal mengunggah logo perusahaan.');
+            setTimeout(() => setErrorMsg(''), 4000);
+        } finally {
+            setLogoUploading(false);
+            event.target.value = '';
+        }
+    };
+
+    const handleRemoveLogo = async () => {
+        if (!company?.logo_url || logoUploading || logoRemoving) return;
+        if (!window.confirm('Hapus logo perusahaan saat ini?')) return;
+
+        setLogoRemoving(true);
+        setSuccessMsg('');
+        setErrorMsg('');
+
+        try {
+            await platformApi.removeMyCompanyLogo();
+            await fetchProfile();
+            await fetchMe();
+            setSuccessMsg('Logo perusahaan berhasil dihapus!');
+            setTimeout(() => setSuccessMsg(''), 3000);
+        } catch {
+            setErrorMsg('Gagal menghapus logo perusahaan.');
+            setTimeout(() => setErrorMsg(''), 4000);
+        } finally {
+            setLogoRemoving(false);
         }
     };
 
@@ -207,22 +267,62 @@ export function CompanySettingsPanel({ T, isDesktop }: { T: Theme; isDesktop: bo
             {/* ═══ PROFILE SECTION ═══ */}
             {activeSection === 'profile' && (
                 <>
+                    <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        onChange={handleLogoChange}
+                        style={{ display: 'none' }}
+                    />
                     {/* Company Logo + Name Header */}
                     <div style={card()}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                                <div style={{
-                                    width: 64, height: 64, borderRadius: 16,
-                                    background: `linear-gradient(135deg, ${T.primary}30, ${T.primary}10)`,
-                                    border: `2px dashed ${T.primary}40`,
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    flexShrink: 0, cursor: 'pointer',
-                                }}>
-                                    {company?.logo_url ? (
-                                        <img src={company.logo_url} alt="Logo" style={{ width: 56, height: 56, borderRadius: 12, objectFit: 'cover' }} />
-                                    ) : (
-                                        <Building2 size={28} color={T.primary} />
-                                    )}
+                                <div style={{ position: 'relative', flexShrink: 0 }}>
+                                    <button
+                                        onClick={handleLogoSelect}
+                                        disabled={logoUploading || logoRemoving}
+                                        style={{
+                                            width: 64, height: 64, borderRadius: 16,
+                                            background: `linear-gradient(135deg, ${T.primary}30, ${T.primary}10)`,
+                                            border: `2px dashed ${T.primary}40`,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            cursor: logoUploading || logoRemoving ? 'not-allowed' : 'pointer',
+                                            opacity: logoUploading || logoRemoving ? 0.7 : 1,
+                                            overflow: 'hidden',
+                                        }}
+                                        title="Ubah logo perusahaan"
+                                    >
+                                        {company?.logo_url ? (
+                                            <img src={company.logo_url} alt="Logo" style={{ width: 56, height: 56, borderRadius: 12, objectFit: 'cover' }} />
+                                        ) : (
+                                            <Building2 size={28} color={T.primary} />
+                                        )}
+                                    </button>
+
+                                    <button
+                                        onClick={handleLogoSelect}
+                                        disabled={logoUploading || logoRemoving}
+                                        title="Upload logo"
+                                        style={{
+                                            position: 'absolute',
+                                            right: -4,
+                                            bottom: -4,
+                                            width: 28,
+                                            height: 28,
+                                            borderRadius: 10,
+                                            border: `1px solid ${T.card}`,
+                                            background: logoUploading ? `${T.primary}80` : T.primary,
+                                            color: '#fff',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            boxShadow: T.shadowSm,
+                                            cursor: logoUploading || logoRemoving ? 'not-allowed' : 'pointer',
+                                        }}
+                                    >
+                                        {logoUploading ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <UploadCloud size={13} />}
+                                    </button>
                                 </div>
                                 <div>
                                     <h3 style={{ fontSize: 20, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif" }}>
@@ -245,16 +345,37 @@ export function CompanySettingsPanel({ T, isDesktop }: { T: Theme; isDesktop: bo
                                     </div>
                                 </div>
                             </div>
-                            <button onClick={() => setEditMode(!editMode)} style={{
-                                display: 'flex', alignItems: 'center', gap: 6,
-                                padding: '8px 16px', borderRadius: 10,
-                                background: editMode ? `${T.danger}10` : `${T.primary}10`,
-                                color: editMode ? T.danger : T.primary,
-                                border: `1px solid ${editMode ? `${T.danger}30` : `${T.primary}30`}`,
-                                fontWeight: 700, fontSize: 12,
-                            }}>
-                                {editMode ? <><X size={14} /> Batal</> : <><Pencil size={14} /> Edit</>}
-                            </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                {company?.logo_url && (
+                                    <button
+                                        onClick={handleRemoveLogo}
+                                        disabled={logoUploading || logoRemoving}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: 6,
+                                            padding: '8px 14px', borderRadius: 10,
+                                            background: `${T.danger}10`,
+                                            color: T.danger,
+                                            border: `1px solid ${T.danger}30`,
+                                            fontWeight: 700, fontSize: 12,
+                                            opacity: logoRemoving ? 0.7 : 1,
+                                        }}
+                                    >
+                                        {logoRemoving ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={14} />}
+                                        Hapus Logo
+                                    </button>
+                                )}
+
+                                <button onClick={() => setEditMode(!editMode)} style={{
+                                    display: 'flex', alignItems: 'center', gap: 6,
+                                    padding: '8px 16px', borderRadius: 10,
+                                    background: editMode ? `${T.danger}10` : `${T.primary}10`,
+                                    color: editMode ? T.danger : T.primary,
+                                    border: `1px solid ${editMode ? `${T.danger}30` : `${T.primary}30`}`,
+                                    fontWeight: 700, fontSize: 12,
+                                }}>
+                                    {editMode ? <><X size={14} /> Batal</> : <><Pencil size={14} /> Edit</>}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Stats Row */}
