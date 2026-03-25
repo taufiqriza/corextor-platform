@@ -89,9 +89,9 @@ jobs:
     timeout-minutes: 45
     environment: production
     env:
-      SSH_HOST: ${{ vars.HOSTINGER_SSH_HOST || vars.SSH_HOST }}
-      SSH_PORT: ${{ vars.HOSTINGER_SSH_PORT || vars.SSH_PORT }}
-      SSH_USER: ${{ vars.HOSTINGER_SSH_USER || vars.SSH_USER }}
+      SSH_HOST: ${{ vars.HOSTINGER_SSH_HOST || vars.SSH_HOST || secrets.HOSTINGER_SSH_HOST || secrets.SSH_HOST }}
+      SSH_PORT: ${{ vars.HOSTINGER_SSH_PORT || vars.SSH_PORT || secrets.HOSTINGER_SSH_PORT || secrets.SSH_PORT }}
+      SSH_USER: ${{ vars.HOSTINGER_SSH_USER || vars.SSH_USER || secrets.HOSTINGER_SSH_USER || secrets.SSH_USER }}
       DEPLOY_BASE: ${{ vars.HOSTINGER_DEPLOY_BASE }}
       PRIMARY_DOCROOT: ${{ vars.HOSTINGER_PRIMARY_DOCROOT }}
       EMPLOYEE_SUBDIR_NAME: ${{ vars.HOSTINGER_EMPLOYEE_SUBDIR_NAME }}
