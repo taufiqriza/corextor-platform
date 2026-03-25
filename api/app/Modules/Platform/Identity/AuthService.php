@@ -87,20 +87,22 @@ class AuthService
             return null;
         }
 
-        if (! $company->isActive()) {
+        if ($company && ! $company->isActive()) {
             SessionService::revokeSession($session->id);
             return null;
         }
 
         // 3. Resolve role and products (may have changed since last login)
-        $role = MembershipService::resolveEffectiveRole($user, $company->id);
-        $activeProducts = MembershipService::resolveActiveProducts($user, $company);
+        $role = MembershipService::resolveEffectiveRole($user, $company?->id);
+        $activeProducts = $company
+            ? MembershipService::resolveActiveProducts($user, $company)
+            : [];
 
         // 4. Issue new access token (keep same refresh session)
         $tokenData = TokenService::issueAccessToken(
             userId: $user->id,
-            companyId: $company->id,
-            role: $role,
+            companyId: $company?->id,
+            role: $role ?? $user->platform_role,
             activeProducts: $activeProducts,
             sessionId: $session->id,
         );
@@ -127,7 +129,7 @@ class AuthService
     /**
      * Get user profile with company context.
      */
-    public static function getCurrentUserProfile(int $userId, int $companyId): ?array
+    public static function getCurrentUserProfile(int $userId, ?int $companyId = null): ?array
     {
         $user = User::find($userId);
 
@@ -135,7 +137,7 @@ class AuthService
             return null;
         }
 
-        $company = Company::active()->find($companyId);
+        $company = $companyId ? Company::active()->find($companyId) : null;
         $role = MembershipService::resolveEffectiveRole($user, $companyId);
         $activeProducts = $company
             ? MembershipService::resolveActiveProducts($user, $company)
@@ -199,7 +201,7 @@ class AuthService
             'updated_fields' => ['name', 'email'],
         ], $companyId);
 
-        return self::getCurrentUserProfile($userId, $companyId ?? 0) ?? [
+        return self::getCurrentUserProfile($userId, $companyId) ?? [
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -276,7 +278,7 @@ class AuthService
             'updated_fields' => ['avatar_url'],
         ], $companyId);
 
-        return self::getCurrentUserProfile($userId, $companyId ?? 0) ?? [
+        return self::getCurrentUserProfile($userId, $companyId) ?? [
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -313,7 +315,7 @@ class AuthService
             'updated_fields' => ['avatar_url'],
         ], $companyId);
 
-        return self::getCurrentUserProfile($userId, $companyId ?? 0) ?? [
+        return self::getCurrentUserProfile($userId, $companyId) ?? [
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -334,8 +336,8 @@ class AuthService
         ?Company $company,
         Request $request,
     ): array {
-        $companyId = $company?->id ?? 0;
-        $role = MembershipService::resolveEffectiveRole($user, $companyId ?: null);
+        $companyId = $company?->id;
+        $role = MembershipService::resolveEffectiveRole($user, $companyId);
         $activeProducts = $company
             ? MembershipService::resolveActiveProducts($user, $company)
             : [];
@@ -351,7 +353,7 @@ class AuthService
         $tokenData = TokenService::issueAccessToken(
             userId: $user->id,
             companyId: $companyId,
-            role: $role ?? 'super_admin',
+            role: $role ?? $user->platform_role,
             activeProducts: $activeProducts,
             sessionId: $sessionData['session']->id,
         );
@@ -359,7 +361,7 @@ class AuthService
         // Audit log
         AuditService::platform('auth.login', [
             'method' => 'email',
-        ], $companyId ?: null);
+        ], $companyId);
 
         return [
             'token_data' => $tokenData,
@@ -369,8 +371,8 @@ class AuthService
                 'name' => $user->name,
                 'email' => $user->email,
                 'avatar_url' => self::publicAvatarUrl($user->avatar_url),
-                'role' => $role ?? 'super_admin',
-                'current_company_id' => $companyId ?: null,
+                'role' => $role ?? $user->platform_role,
+                'current_company_id' => $companyId,
                 'active_products' => $activeProducts,
                 'company' => $company ? [
                     'id' => $company->id,

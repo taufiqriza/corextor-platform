@@ -100,7 +100,10 @@ class AuthController extends Controller
         $userId = $request->attributes->get('auth_user_id');
         $companyId = $request->attributes->get('auth_company_id');
 
-        $profile = AuthService::getCurrentUserProfile($userId, $companyId);
+        $profile = AuthService::getCurrentUserProfile(
+            (int) $userId,
+            $companyId ? (int) $companyId : null,
+        );
 
         if (! $profile) {
             return ApiResponse::notFound('User not found');

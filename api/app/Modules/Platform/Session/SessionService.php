@@ -12,7 +12,7 @@ class SessionService
      */
     public static function createSession(
         int $userId,
-        int $companyId,
+        ?int $companyId,
         Request $request,
     ): array {
         $rawToken = TokenService::generateRefreshToken();
@@ -55,7 +55,11 @@ class SessionService
             return null;
         }
 
-        if (! $session->company || ! $session->company->isActive()) {
+        if ($session->company_id !== null) {
+            if (! $session->company || ! $session->company->isActive()) {
+                return null;
+            }
+        } elseif (! $session->user->isInternalTeam()) {
             return null;
         }
 

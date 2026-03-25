@@ -16,7 +16,7 @@ class TokenService
      */
     public static function issueAccessToken(
         int $userId,
-        int $companyId,
+        ?int $companyId,
         string $role,
         array $activeProducts,
         int $sessionId,
