@@ -45,12 +45,12 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ env.DEPLOY_REF }}
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -63,6 +63,15 @@ jobs:
       - name: Build frontend
         working-directory: web
         run: npm run build
+
+      - name: Validate build output
+        run: |
+          if [ ! -f web/dist/index.html ]; then
+            echo "Build failed: web/dist/index.html not found" >&2
+            exit 1
+          fi
+          echo "Build output validated"
+          ls -la web/dist/
 
       - name: Pack frontend artifact
         run: tar -czf "$RUNNER_TEMP/web-dist.tar.gz" -C web/dist .
@@ -101,7 +110,7 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ env.DEPLOY_REF }}
 
@@ -137,7 +146,6 @@ jobs:
       - name: Execute remote deploy
         run: |
           ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "\
-            chmod +x /tmp/corextor-remote-deploy.sh && \
             DEPLOY_BASE='$DEPLOY_BASE' \
             RELEASE_ID='$RELEASE_ID' \
             SOURCE_ARCHIVE='$DEPLOY_BASE/artifacts/source-$RELEASE_ID.tar.gz' \
@@ -148,7 +156,7 @@ jobs:
             API_SUBDIR_NAME='${API_SUBDIR_NAME:-api.corextor.com}' \
             SWITCH_DOCROOTS='$SWITCH_LIVE' \
             RUN_MIGRATIONS='$RUN_MIGRATIONS' \
-            /tmp/corextor-remote-deploy.sh"
+            bash /tmp/corextor-remote-deploy.sh"
 
       - name: Verify production URLs
         run: |
