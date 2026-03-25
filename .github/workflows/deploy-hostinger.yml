@@ -61,7 +61,7 @@ jobs:
         run: npm run build
 
       - name: Pack frontend artifact
-        run: tar -czf "$RUNNER_TEMP/web-dist.tar.gz" -C dist .
+        run: tar -czf "$RUNNER_TEMP/web-dist.tar.gz" -C web/dist .
 
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
