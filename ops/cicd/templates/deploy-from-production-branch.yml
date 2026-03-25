@@ -89,14 +89,10 @@ jobs:
     timeout-minutes: 45
     environment: production
     env:
-      SSH_HOST: ${{ vars.HOSTINGER_SSH_HOST || vars.SSH_HOST || secrets.HOSTINGER_SSH_HOST || secrets.SSH_HOST }}
-      SSH_PORT: ${{ vars.HOSTINGER_SSH_PORT || vars.SSH_PORT || secrets.HOSTINGER_SSH_PORT || secrets.SSH_PORT }}
-      SSH_USER: ${{ vars.HOSTINGER_SSH_USER || vars.SSH_USER || secrets.HOSTINGER_SSH_USER || secrets.SSH_USER }}
-      DEPLOY_BASE: ${{ vars.HOSTINGER_DEPLOY_BASE }}
-      PRIMARY_DOCROOT: ${{ vars.HOSTINGER_PRIMARY_DOCROOT }}
-      EMPLOYEE_SUBDIR_NAME: ${{ vars.HOSTINGER_EMPLOYEE_SUBDIR_NAME }}
-      API_SUBDIR_NAME: ${{ vars.HOSTINGER_API_SUBDIR_NAME }}
-      SSH_PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY || secrets.SSH_PRIVATE_KEY }}
+      HOSTINGER_DEPLOY_BASE: ${{ vars.HOSTINGER_DEPLOY_BASE }}
+      HOSTINGER_PRIMARY_DOCROOT: ${{ vars.HOSTINGER_PRIMARY_DOCROOT }}
+      HOSTINGER_EMPLOYEE_SUBDIR_NAME: ${{ vars.HOSTINGER_EMPLOYEE_SUBDIR_NAME }}
+      HOSTINGER_API_SUBDIR_NAME: ${{ vars.HOSTINGER_API_SUBDIR_NAME }}
     steps:
       - name: Resolve deploy settings
         run: |
@@ -109,6 +105,55 @@ jobs:
             echo "SWITCH_LIVE=1" >> "$GITHUB_ENV"
             echo "RUN_MIGRATIONS=1" >> "$GITHUB_ENV"
           fi
+
+          SSH_HOST_VALUE="${{ vars.HOSTINGER_SSH_HOST }}"
+          if [ -z "$SSH_HOST_VALUE" ]; then
+            SSH_HOST_VALUE="${{ vars.SSH_HOST }}"
+          fi
+          if [ -z "$SSH_HOST_VALUE" ]; then
+            SSH_HOST_VALUE="${{ secrets.HOSTINGER_SSH_HOST }}"
+          fi
+          if [ -z "$SSH_HOST_VALUE" ]; then
+            SSH_HOST_VALUE="${{ secrets.SSH_HOST }}"
+          fi
+
+          SSH_PORT_VALUE="${{ vars.HOSTINGER_SSH_PORT }}"
+          if [ -z "$SSH_PORT_VALUE" ]; then
+            SSH_PORT_VALUE="${{ vars.SSH_PORT }}"
+          fi
+          if [ -z "$SSH_PORT_VALUE" ]; then
+            SSH_PORT_VALUE="${{ secrets.HOSTINGER_SSH_PORT }}"
+          fi
+          if [ -z "$SSH_PORT_VALUE" ]; then
+            SSH_PORT_VALUE="${{ secrets.SSH_PORT }}"
+          fi
+
+          SSH_USER_VALUE="${{ vars.HOSTINGER_SSH_USER }}"
+          if [ -z "$SSH_USER_VALUE" ]; then
+            SSH_USER_VALUE="${{ vars.SSH_USER }}"
+          fi
+          if [ -z "$SSH_USER_VALUE" ]; then
+            SSH_USER_VALUE="${{ secrets.HOSTINGER_SSH_USER }}"
+          fi
+          if [ -z "$SSH_USER_VALUE" ]; then
+            SSH_USER_VALUE="${{ secrets.SSH_USER }}"
+          fi
+
+          SSH_PRIVATE_KEY_VALUE="${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}"
+          if [ -z "$SSH_PRIVATE_KEY_VALUE" ]; then
+            SSH_PRIVATE_KEY_VALUE="${{ secrets.SSH_PRIVATE_KEY }}"
+          fi
+
+          echo "SSH_HOST=$SSH_HOST_VALUE" >> "$GITHUB_ENV"
+          echo "SSH_PORT=$SSH_PORT_VALUE" >> "$GITHUB_ENV"
+          echo "SSH_USER=$SSH_USER_VALUE" >> "$GITHUB_ENV"
+          echo "SSH_PRIVATE_KEY<<__COREXTOR_KEY__" >> "$GITHUB_ENV"
+          printf '%s\n' "$SSH_PRIVATE_KEY_VALUE" >> "$GITHUB_ENV"
+          echo "__COREXTOR_KEY__" >> "$GITHUB_ENV"
+          echo "DEPLOY_BASE=$HOSTINGER_DEPLOY_BASE" >> "$GITHUB_ENV"
+          echo "PRIMARY_DOCROOT=$HOSTINGER_PRIMARY_DOCROOT" >> "$GITHUB_ENV"
+          echo "EMPLOYEE_SUBDIR_NAME=$HOSTINGER_EMPLOYEE_SUBDIR_NAME" >> "$GITHUB_ENV"
+          echo "API_SUBDIR_NAME=$HOSTINGER_API_SUBDIR_NAME" >> "$GITHUB_ENV"
 
       - name: Validate deploy configuration
         run: |
