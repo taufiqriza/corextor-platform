@@ -16,7 +16,7 @@ class SessionService
         Request $request,
     ): array {
         $rawToken = TokenService::generateRefreshToken();
-        $ttl = (int) env('JWT_REFRESH_TTL', 604800); // 7 days
+        $ttl = (int) config('app.jwt_refresh_ttl', 604800); // 7 days
 
         $session = RefreshSession::create([
             'user_id' => $userId,
@@ -91,7 +91,7 @@ class SessionService
      */
     public static function makeRefreshCookie(string $rawToken): \Symfony\Component\HttpFoundation\Cookie
     {
-        $ttl = (int) env('JWT_REFRESH_TTL', 604800);
+        $ttl = (int) config('app.jwt_refresh_ttl', 604800);
 
         return cookie(
             name: 'corextor_refresh',
@@ -127,9 +127,9 @@ class SessionService
      */
     private static function getCookieDomain(): ?string
     {
-        $configuredDomain = env('REFRESH_COOKIE_DOMAIN');
+        $configuredDomain = config('app.refresh_cookie_domain');
         if ($configuredDomain) {
-            return $configuredDomain;
+            return (string) $configuredDomain;
         }
 
         // In production: .corextor.com (shared across all subdomains)

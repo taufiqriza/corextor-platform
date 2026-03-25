@@ -21,7 +21,7 @@ class TokenService
         array $activeProducts,
         int $sessionId,
     ): array {
-        $ttl = (int) env('JWT_TTL', 900);
+        $ttl = (int) config('app.jwt_ttl', 900);
         $now = time();
 
         $payload = [
@@ -35,7 +35,13 @@ class TokenService
             'exp' => $now + $ttl,
         ];
 
-        $token = JWT::encode($payload, env('JWT_SECRET'), 'HS256');
+        $secret = (string) config('app.jwt_secret', '');
+
+        if ($secret === '') {
+            throw new \RuntimeException('JWT secret is not configured.');
+        }
+
+        $token = JWT::encode($payload, $secret, 'HS256');
 
         return [
             'token' => $token,
@@ -51,7 +57,13 @@ class TokenService
      */
     public static function decodeAccessToken(string $token): object
     {
-        return JWT::decode($token, new Key(env('JWT_SECRET'), 'HS256'));
+        $secret = (string) config('app.jwt_secret', '');
+
+        if ($secret === '') {
+            throw new \RuntimeException('JWT secret is not configured.');
+        }
+
+        return JWT::decode($token, new Key($secret, 'HS256'));
     }
 
     /**

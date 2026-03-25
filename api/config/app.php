@@ -99,6 +99,14 @@ return [
 
     'key' => env('APP_KEY'),
 
+    'jwt_secret' => env('JWT_SECRET'),
+
+    'jwt_ttl' => (int) env('JWT_TTL', 900),
+
+    'jwt_refresh_ttl' => (int) env('JWT_REFRESH_TTL', 604800),
+
+    'refresh_cookie_domain' => env('REFRESH_COOKIE_DOMAIN'),
+
     'previous_keys' => [
         ...array_filter(
             explode(',', (string) env('APP_PREVIOUS_KEYS', ''))
