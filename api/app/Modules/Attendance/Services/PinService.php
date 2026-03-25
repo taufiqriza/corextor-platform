@@ -4,6 +4,7 @@ namespace App\Modules\Attendance\Services;
 
 use App\Modules\Attendance\Models\AttendanceUser;
 use App\Modules\Platform\Audit\AuditService;
+use App\Modules\Platform\Identity\AuthService;
 use App\Modules\Platform\Identity\TokenService;
 use App\Modules\Platform\Identity\User;
 use App\Modules\Platform\Membership\MembershipService;
@@ -243,6 +244,7 @@ class PinService
                 'id' => $platformUser->id,
                 'name' => $platformUser->name,
                 'email' => $platformUser->email ?? '',
+                'avatar_url' => AuthService::publicAvatarUrl($platformUser->avatar_url),
                 'role' => $role,
                 'current_company_id' => $companyId,
                 'active_products' => $activeProducts,

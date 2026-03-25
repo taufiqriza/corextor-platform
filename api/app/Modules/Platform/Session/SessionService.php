@@ -123,6 +123,11 @@ class SessionService
      */
     private static function getCookieDomain(): ?string
     {
+        $configuredDomain = env('REFRESH_COOKIE_DOMAIN');
+        if ($configuredDomain) {
+            return $configuredDomain;
+        }
+
         // In production: .corextor.com (shared across all subdomains)
         // In local: null (localhost only)
         if (app()->environment('production')) {

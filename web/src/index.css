@@ -93,6 +93,11 @@ body {
   scrollbar-width: none;
 }
 
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
 /* ── Typography ── */
 h1,
 h2,
@@ -186,6 +191,16 @@ h6 {
   }
 }
 
+@keyframes cxSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ── Utility Classes ── */
 .cx-fade-in {
   animation: fadeIn .35s ease-out both;
@@ -218,6 +233,10 @@ h6 {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.cx-spin {
+  animation: cxSpin 1s linear infinite;
 }
 
 /* ── Button & Input Reset ── */
@@ -264,6 +283,64 @@ textarea::placeholder {
 
 @media (max-width: 980px) {
   .cx-login-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.cx-landing-hero-grid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
+}
+
+.cx-landing-card-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cx-landing-service-grid {
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
+}
+
+.cx-landing-footer-grid {
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr);
+}
+
+.cx-landing-platform-grid,
+.cx-landing-trust-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cx-landing-service-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cx-landing-desktop-nav,
+.cx-landing-desktop-actions {
+  display: flex;
+}
+
+@media (max-width: 1080px) {
+  .cx-landing-hero-grid,
+  .cx-landing-card-grid,
+  .cx-landing-service-grid,
+  .cx-landing-footer-grid,
+  .cx-landing-platform-grid,
+  .cx-landing-service-card-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 920px) {
+  .cx-landing-desktop-nav,
+  .cx-landing-desktop-actions {
+    display: none !important;
+  }
+
+  .cx-landing-mobile-toggle {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .cx-landing-trust-grid {
     grid-template-columns: 1fr !important;
   }
 }

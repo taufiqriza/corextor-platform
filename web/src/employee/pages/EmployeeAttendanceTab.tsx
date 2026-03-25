@@ -343,6 +343,7 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
         .map(part => part[0])
         .join('')
         .toUpperCase();
+    const avatarUrl = user?.avatar_url || '';
     const officeLocationLabel = branch?.location || branch?.name || 'Lokasi kantor belum diatur';
 
     const heroStatus = attendanceMode === 'complete'
@@ -561,7 +562,17 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
                                         overflow: 'hidden',
                                         flexShrink: 0,
                                     }}>
-                                        {employeeInitials ? (
+                                        {avatarUrl ? (
+                                            <img
+                                                src={avatarUrl}
+                                                alt={employeeName}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
+                                                }}
+                                            />
+                                        ) : employeeInitials ? (
                                             <span style={{
                                                 fontSize: isDesktop ? 13 : 12,
                                                 fontWeight: 900,

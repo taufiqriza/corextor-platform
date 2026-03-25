@@ -1,12 +1,20 @@
 import { create } from 'zustand';
 import type { AuthUser, MePayload } from '@/types/auth.types';
 import { platformApi } from '@/api/platform.api';
+import {
+    clearSessionState,
+    onSessionInvalidated,
+    setSessionRole,
+    setSessionToken,
+} from '@/lib/authSession';
 
 interface AuthState {
     user: AuthUser | null;
     token: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    isInitializing: boolean;
+    hasInitialized: boolean;
 
     setAuth: (user: AuthUser, token: string) => void;
     clearAuth: () => void;
@@ -14,7 +22,7 @@ interface AuthState {
     loginWithPin: (pin: string) => Promise<void>;
     logout: () => Promise<void>;
     fetchMe: () => Promise<void>;
-    initialize: () => void;
+    initialize: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -22,17 +30,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     token: null,
     isAuthenticated: false,
     isLoading: false,
+    isInitializing: false,
+    hasInitialized: false,
 
     setAuth: (user, token) => {
         const normalizedUser = normalizeAuthUser(user);
-        localStorage.setItem('corextor_token', token);
-        localStorage.setItem('corextor_user', JSON.stringify(normalizedUser));
+        setSessionToken(token);
+        setSessionRole(normalizedUser.role);
         set({ user: normalizedUser, token, isAuthenticated: true });
     },
 
     clearAuth: () => {
-        localStorage.removeItem('corextor_token');
-        localStorage.removeItem('corextor_user');
+        clearSessionState();
         set({ user: null, token: null, isAuthenticated: false });
     },
 
@@ -66,32 +75,51 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     fetchMe: async () => {
+        const token = get().token;
+        if (!token) {
+            get().clearAuth();
+            return;
+        }
+
         try {
             const res = await platformApi.me();
-            const token = localStorage.getItem('corextor_token');
-            if (token) {
-                const normalizedUser = normalizeAuthUser(res.data.data);
-                localStorage.setItem('corextor_user', JSON.stringify(normalizedUser));
-                set({ user: normalizedUser, token, isAuthenticated: true });
-            }
+            const normalizedUser = normalizeAuthUser(res.data.data);
+            setSessionRole(normalizedUser.role);
+            set({ user: normalizedUser, token, isAuthenticated: true });
         } catch {
             get().clearAuth();
         }
     },
 
-    initialize: () => {
-        const token = localStorage.getItem('corextor_token');
-        const userStr = localStorage.getItem('corextor_user');
-        if (token && userStr) {
-            try {
-                const user = JSON.parse(userStr) as AuthUser;
-                set({ user, token, isAuthenticated: true });
-            } catch {
-                get().clearAuth();
-            }
+    initialize: async () => {
+        if (get().isInitializing || get().hasInitialized) return;
+
+        set({ isInitializing: true });
+
+        try {
+            const refresh = await platformApi.refresh();
+            const token = refresh.data.data.token;
+            setSessionToken(token);
+            set({ token, isAuthenticated: true });
+            await get().fetchMe();
+        } catch {
+            get().clearAuth();
+        } finally {
+            set({ isInitializing: false, hasInitialized: true });
         }
     },
 }));
+
+onSessionInvalidated(() => {
+    useAuthStore.setState({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        isInitializing: false,
+        hasInitialized: true,
+    });
+});
 
 function normalizeAuthUser(payload: AuthUser | MePayload): AuthUser {
     if ('user' in payload) {

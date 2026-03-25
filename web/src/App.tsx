@@ -5,19 +5,47 @@ import { useAuthStore } from '@/store/authStore';
 import { AuthGuard, GuestGuard, PLATFORM_ROLES } from '@/guards/AuthGuard';
 import { LoginPage } from '@/pages/LoginPage';
 import { PinLoginPage } from '@/pages/PinLoginPage';
+import { LandingPage } from '@/pages/LandingPage';
+import { RedirectByAuthPage } from '@/pages/RedirectByAuthPage';
 import { AdminLayout } from '@/admin/layouts/AdminLayout';
 import { CompanyAdminLayout } from '@/company/layouts/CompanyAdminLayout';
 import { EmployeeLayout } from '@/employee/layouts/EmployeeLayout';
+import { getHomeDestination, getLoginDestination, hasDedicatedEmployeeSurface, isEmployeeSurface } from '@/lib/appSurface';
 
 function AppRoutes() {
   const initialize = useAuthStore(s => s.initialize);
   useEffect(() => { initialize(); }, [initialize]);
 
+  const employeeSurface = isEmployeeSurface();
+  const dedicatedEmployeeSurface = hasDedicatedEmployeeSurface();
+
+  if (employeeSurface) {
+    return (
+      <Routes>
+        <Route path="/" element={<RedirectByAuthPage />} />
+        <Route path="/pin" element={<GuestGuard><PinLoginPage /></GuestGuard>} />
+        <Route path="/employee" element={
+          <AuthGuard allowedRoles={['employee']}>
+            <EmployeeLayout />
+          </AuthGuard>
+        } />
+        <Route path="*" element={<RedirectByAuthPage />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
+
       {/* Guest routes */}
       <Route path="/login" element={<GuestGuard><LoginPage /></GuestGuard>} />
-      <Route path="/pin" element={<GuestGuard><PinLoginPage /></GuestGuard>} />
+      <Route
+        path="/pin"
+        element={dedicatedEmployeeSurface
+          ? <CrossOriginRedirect to={getLoginDestination('employee')} />
+          : <GuestGuard><PinLoginPage /></GuestGuard>}
+      />
 
       {/* Protected routes — strict role isolation */}
       <Route path="/admin" element={
@@ -30,18 +58,18 @@ function AppRoutes() {
           <CompanyAdminLayout />
         </AuthGuard>
       } />
-      <Route path="/employee" element={
-        <AuthGuard allowedRoles={['employee']}>
-          <EmployeeLayout />
-        </AuthGuard>
-      } />
+      <Route
+        path="/employee"
+        element={dedicatedEmployeeSurface
+          ? <CrossOriginRedirect to={getHomeDestination('employee')} />
+          : (
+            <AuthGuard allowedRoles={['employee']}>
+              <EmployeeLayout />
+            </AuthGuard>
+          )}
+      />
 
-      {/* Fallback — AuthGuard without allowedRoles will redirect to correct portal */}
-      <Route path="*" element={
-        <AuthGuard>
-          <div />
-        </AuthGuard>
-      } />
+      <Route path="*" element={<RedirectByAuthPage />} />
     </Routes>
   );
 }
@@ -54,4 +82,12 @@ export default function App() {
       </BrowserRouter>
     </ThemeProvider>
   );
+}
+
+function CrossOriginRedirect({ to }: { to: string }) {
+  useEffect(() => {
+    window.location.replace(to);
+  }, [to]);
+
+  return null;
 }

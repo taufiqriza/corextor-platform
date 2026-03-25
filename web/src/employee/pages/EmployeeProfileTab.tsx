@@ -1,17 +1,21 @@
-import { Children, useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { Children, useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
     Bell,
+    Camera,
     ChevronRight,
     Clock3,
+    Code2,
     Globe,
     HelpCircle,
     Info,
     KeyRound,
+    Loader2,
     LogOut,
     MapPin,
     Moon,
     Shield,
     Smartphone,
+    Sparkles,
     Sun,
     User,
     X,
@@ -22,6 +26,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { attendanceApi, platformApi } from '@/api/platform.api';
 import type { AttendanceContextPayload } from '@/types/attendance.types';
+import { getLoginDestination, navigateToResolvedUrl } from '@/lib/appSurface';
 
 interface Props {
     T: Theme;
@@ -30,7 +35,7 @@ interface Props {
     toggleTheme: () => void;
 }
 
-type SheetKey = 'account' | 'role' | 'pin' | 'language' | 'notifications' | 'version' | 'help' | 'logout' | null;
+type SheetKey = 'account' | 'role' | 'pin' | 'language' | 'notifications' | 'version' | 'help' | 'services' | 'logout' | null;
 type NoticeTone = 'success' | 'error' | 'info';
 type NoticeState = { tone: NoticeTone; message: string } | null;
 type LanguageCode = 'id' | 'en';
@@ -56,6 +61,8 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
     const [sheetError, setSheetError] = useState('');
     const [notice, setNotice] = useState<NoticeState>(null);
     const [savingSheet, setSavingSheet] = useState<'account' | 'pin' | null>(null);
+    const [avatarBusy, setAvatarBusy] = useState(false);
+    const [showServicePromo, setShowServicePromo] = useState(true);
     const [language, setLanguage] = useState<LanguageCode>(() => loadLanguagePreference());
     const [languageDraft, setLanguageDraft] = useState<LanguageCode>(() => loadLanguagePreference());
     const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(() => loadNotificationPreference());
@@ -69,6 +76,7 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
         new_pin: '',
         new_pin_confirmation: '',
     });
+    const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
     const fetchContext = useCallback(async () => {
         try {
@@ -136,7 +144,7 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
 
     const handleLogout = async () => {
         await logout();
-        navigate('/login', { replace: true });
+        navigateToResolvedUrl(getLoginDestination('employee'), navigate);
     };
 
     const handleSaveAccount = async () => {
@@ -224,6 +232,42 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
         flashNotice('success', 'Preferensi notifikasi berhasil disimpan.');
     };
 
+    const handlePickAvatar = () => {
+        if (avatarBusy) return;
+        avatarInputRef.current?.click();
+    };
+
+    const handleAvatarSelected = async (file?: File | null) => {
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            flashNotice('error', 'File harus berupa gambar.');
+            return;
+        }
+
+        if (file.size > 4 * 1024 * 1024) {
+            flashNotice('error', 'Ukuran foto maksimal 4 MB.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        setAvatarBusy(true);
+        try {
+            await platformApi.updateMyAvatar(formData);
+            await fetchMe();
+            flashNotice('success', 'Foto profil berhasil diperbarui.');
+        } catch (error: any) {
+            flashNotice('error', extractApiMessage(error, 'Gagal memperbarui foto profil.'));
+        } finally {
+            setAvatarBusy(false);
+            if (avatarInputRef.current) {
+                avatarInputRef.current.value = '';
+            }
+        }
+    };
+
     const initials = (user?.name ?? 'E')
         .split(' ')
         .filter(Boolean)
@@ -234,6 +278,7 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
     const firstName = (user?.name ?? 'Karyawan').split(' ')[0];
     const companyName = profileContext?.company?.name ?? user?.company?.name ?? 'Corextor';
     const companyLogo = profileContext?.company?.logo_url ?? user?.company?.logo_url ?? '';
+    const avatarUrl = user?.avatar_url ?? '';
     const branchName = profileContext?.branch?.name ?? 'Belum ada branch';
     const attendanceStatus = profileContext?.attendance_user.status ?? 'unknown';
     const todayStatus = profileContext?.today_record?.time_out
@@ -359,6 +404,14 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
 
     return (
         <div>
+            <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                style={{ display: 'none' }}
+                onChange={event => void handleAvatarSelected(event.target.files?.[0] ?? null)}
+            />
+
             <section style={{
                 position: 'relative',
                 overflow: 'hidden',
@@ -428,12 +481,47 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 color: '#fff',
-                                fontWeight: 900,
-                                fontSize: isDesktop ? 20 : 18,
-                                fontFamily: "'Sora', sans-serif",
+                                overflow: 'hidden',
+                                position: 'relative',
                                 flexShrink: 0,
                             }}>
-                                {initials}
+                                {avatarUrl ? (
+                                    <img
+                                        src={avatarUrl}
+                                        alt={user?.name ?? 'Karyawan'}
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                ) : (
+                                    <span style={{
+                                        fontWeight: 900,
+                                        fontSize: isDesktop ? 20 : 18,
+                                        fontFamily: "'Sora', sans-serif",
+                                    }}>
+                                        {initials}
+                                    </span>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={handlePickAvatar}
+                                    disabled={avatarBusy}
+                                    style={{
+                                        position: 'absolute',
+                                        right: 4,
+                                        bottom: 4,
+                                        width: 22,
+                                        height: 22,
+                                        borderRadius: 999,
+                                        background: 'rgba(15,23,42,.72)',
+                                        border: '1px solid rgba(255,255,255,.18)',
+                                        color: '#fff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        boxShadow: '0 6px 14px rgba(15,23,42,.22)',
+                                    }}
+                                >
+                                    {avatarBusy ? <Loader2 size={11} className="cx-spin" /> : <Camera size={11} />}
+                                </button>
                             </div>
 
                             <div style={{ minWidth: 0, flex: 1 }}>
@@ -461,24 +549,6 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
                                     <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,.5)' }} />
                                     <span>{companyName}</span>
                                 </div>
-                                {productChips.length > 0 && (
-                                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-                                        {productChips.map(product => (
-                                            <span key={product} style={{
-                                                fontSize: 9,
-                                                fontWeight: 800,
-                                                padding: '4px 10px',
-                                                borderRadius: 999,
-                                                background: 'rgba(255,255,255,.12)',
-                                                border: '1px solid rgba(255,255,255,.14)',
-                                                color: '#fff',
-                                                textTransform: 'capitalize',
-                                            }}>
-                                                {product}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
                             </div>
                         </div>
 
@@ -611,6 +681,145 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
                     </div>
                 </div>
             </section>
+
+            {showServicePromo && (
+                <section
+                    style={{
+                        position: 'relative',
+                        overflow: 'hidden',
+                        marginBottom: 18,
+                        borderRadius: 22,
+                        padding: isDesktop ? '13px 14px 12px' : '12px 12px 11px',
+                        background: 'linear-gradient(135deg, #0E3B73 0%, #125296 48%, #1C78BA 100%)',
+                        boxShadow: '0 18px 36px rgba(12,63,112,.18)',
+                        color: '#fff',
+                        cursor: 'pointer',
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openSheet('services')}
+                    onKeyDown={event => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            openSheet('services');
+                        }
+                    }}
+                >
+                    <div style={{
+                        position: 'absolute',
+                        top: -36,
+                        right: -24,
+                        width: 116,
+                        height: 116,
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,.1)',
+                        border: '1px solid rgba(255,255,255,.08)',
+                        pointerEvents: 'none',
+                    }} />
+                    <div style={{
+                        position: 'absolute',
+                        bottom: -44,
+                        left: -20,
+                        width: 96,
+                        height: 96,
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,.08)',
+                        pointerEvents: 'none',
+                    }} />
+
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                        }}>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    height: 24,
+                                    padding: '0 9px',
+                                    borderRadius: 999,
+                                    background: 'rgba(255,255,255,.12)',
+                                    border: '1px solid rgba(255,255,255,.14)',
+                                    fontSize: 9,
+                                    fontWeight: 900,
+                                    letterSpacing: .3,
+                                    marginBottom: 8,
+                                }}>
+                                    <Sparkles size={11} />
+                                    Build with Corextor
+                                </div>
+                                <div style={{
+                                    fontSize: isDesktop ? 15 : 13,
+                                    fontWeight: 900,
+                                    fontFamily: "'Sora', sans-serif",
+                                    lineHeight: 1.2,
+                                }}>
+                                    Butuh website atau system untuk bisnismu?
+                                </div>
+                                <div style={{
+                                    marginTop: 4,
+                                    fontSize: 11,
+                                    lineHeight: 1.45,
+                                    color: 'rgba(255,255,255,.82)',
+                                    maxWidth: 540,
+                                }}>
+                                    Website, web apps, Android & iOS, dan system bisnis modern untuk perusahaan.
+                                </div>
+                            </div>
+
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'flex-start',
+                                gap: 6,
+                                flexShrink: 0,
+                            }}>
+                                <div
+                                    style={{
+                                        width: 28,
+                                        height: 28,
+                                        borderRadius: 999,
+                                        background: 'rgba(255,255,255,.12)',
+                                        border: '1px solid rgba(255,255,255,.18)',
+                                        color: '#fff',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    <ChevronRight size={14} />
+                                </div>
+                                <button
+                                    type="button"
+                                    aria-label="Tutup promosi layanan"
+                                    onClick={event => {
+                                        event.stopPropagation();
+                                        setShowServicePromo(false);
+                                    }}
+                                    style={{
+                                        width: 28,
+                                        height: 28,
+                                        borderRadius: 999,
+                                        background: 'rgba(255,255,255,.12)',
+                                        border: '1px solid rgba(255,255,255,.18)',
+                                        color: '#fff',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            )}
 
             {sections.map(section => (
                 <div key={section.title} style={{ marginBottom: 18 }}>
@@ -1100,9 +1309,181 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
             </BottomSheet>
 
             <BottomSheet
+                open={activeSheet === 'services'}
+                title="Layanan pengembangan"
+                subtitle="Untuk perusahaan dan bisnis yang butuh website, web apps, atau system operasional yang lebih rapi."
+                onClose={closeSheet}
+                T={T}
+                isDesktop={isDesktop}
+                footer={(
+                    <>
+                        <button type="button" onClick={closeSheet} style={sheetButtonStyle(T, false)}>
+                            Nanti saja
+                        </button>
+                        <a
+                            href="https://wa.me/6282117049501"
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                                ...sheetButtonStyle(T, true),
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                textDecoration: 'none',
+                            }}
+                        >
+                            Chat WhatsApp
+                        </a>
+                    </>
+                )}
+            >
+                <div style={sheetHeroCardStyle(T)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                            width: 46,
+                            height: 46,
+                            borderRadius: 16,
+                            background: 'linear-gradient(135deg, #0E3B73, #1C78BA)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            flexShrink: 0,
+                        }}>
+                            <Code2 size={20} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: T.text }}>Bangun system yang lebih proper</div>
+                            <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>
+                                Cocok untuk company profile, web apps, dashboard internal, dan system bisnis custom.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={sheetStatGridStyle(isDesktop)}>
+                    <InfoCard T={T} label="Fokus" value="Website & Web Apps" />
+                    <InfoCard T={T} label="Platform" value="Android, iOS & Web" />
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                    {[
+                        {
+                            icon: Globe,
+                            title: 'Website perusahaan',
+                            desc: 'Company profile, landing page, microsite, dan website bilingual Indonesia / English.',
+                            color: T.primary,
+                        },
+                        {
+                            icon: Smartphone,
+                            title: 'Web apps modern',
+                            desc: 'Portal customer, employee apps, booking flow, dashboard mobile-friendly, dan pengalaman seperti aplikasi.',
+                            color: T.info,
+                        },
+                        {
+                            icon: Smartphone,
+                            title: 'Aplikasi Android & iOS',
+                            desc: 'MVP mobile, PWA, atau aplikasi operasional untuk tim lapangan, sales, dan kebutuhan bisnis harian.',
+                            color: '#8B5CF6',
+                        },
+                        {
+                            icon: Shield,
+                            title: 'System untuk bisnis',
+                            desc: 'Admin panel, CRM ringan, workflow operasional, dan system internal sesuai proses perusahaan.',
+                            color: T.success,
+                        },
+                    ].map(item => (
+                        <div key={item.title} style={serviceOfferStyle(T)}>
+                            <div style={serviceOfferIconStyle(item.color)}>
+                                <item.icon size={18} color={item.color} />
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>{item.title}</div>
+                                <div style={{ marginTop: 4, fontSize: 12, lineHeight: 1.7, color: T.textMuted }}>
+                                    {item.desc}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div style={infoBlockStyle(T)}>
+                    <div style={infoBlockTitleStyle(T)}>Contoh yang bisa dibangun</div>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        flexWrap: 'wrap',
+                    }}>
+                        {['System Kasir', 'Kehadiran', 'Laporan', 'Company Profile', 'Dashboard Admin'].map(item => (
+                            <span
+                                key={item}
+                                style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    height: 30,
+                                    padding: '0 12px',
+                                    borderRadius: 999,
+                                    background: `${T.primary}10`,
+                                    border: `1px solid ${T.primary}18`,
+                                    color: T.text,
+                                    fontSize: 11,
+                                    fontWeight: 800,
+                                }}
+                            >
+                                {item}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+
+                <div style={infoBlockStyle(T)}>
+                    <div style={infoBlockTitleStyle(T)}>Portfolio</div>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                        <div style={bulletRowStyle(T)}>
+                            <span style={bulletDotStyle(T)} />
+                            <span>
+                                Lihat karya dan eksplorasi project di{' '}
+                                <a
+                                    href="https://taufiqriza.github.io"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    style={{
+                                        color: T.primary,
+                                        fontWeight: 800,
+                                        textDecoration: 'none',
+                                    }}
+                                >
+                                    taufiqriza.github.io
+                                </a>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={infoBlockStyle(T)}>
+                    <div style={infoBlockTitleStyle(T)}>Contact person</div>
+                    <div style={{ display: 'grid', gap: 8 }}>
+                        <div style={bulletRowStyle(T)}>
+                            <span style={bulletDotStyle(T)} />
+                            <span><strong style={{ color: T.text }}>Muhamad Taufiq Riza</strong></span>
+                        </div>
+                        <div style={bulletRowStyle(T)}>
+                            <span style={bulletDotStyle(T)} />
+                            <span>Software Engineering</span>
+                        </div>
+                        <div style={bulletRowStyle(T)}>
+                            <span style={bulletDotStyle(T)} />
+                            <span>WhatsApp: 082117049501</span>
+                        </div>
+                    </div>
+                </div>
+            </BottomSheet>
+
+            <BottomSheet
                 open={activeSheet === 'logout'}
                 title={`Keluar, ${firstName}?`}
-                subtitle="Anda perlu login ulang untuk mengakses employee portal."
+                subtitle="Anda akan kembali ke halaman PIN login untuk mengakses employee portal."
                 onClose={closeSheet}
                 T={T}
                 isDesktop={isDesktop}
@@ -1530,6 +1911,31 @@ function inlineMessageStyle(T: Theme, tone: NoticeTone): CSSProperties {
         fontSize: 12.5,
         fontWeight: 700,
         lineHeight: 1.5,
+    };
+}
+
+function serviceOfferStyle(T: Theme): CSSProperties {
+    return {
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 12,
+        padding: '14px',
+        borderRadius: 18,
+        border: `1px solid ${T.border}`,
+        background: T.surface,
+    };
+}
+
+function serviceOfferIconStyle(color: string): CSSProperties {
+    return {
+        width: 42,
+        height: 42,
+        borderRadius: 14,
+        background: `${color}12`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
     };
 }
 

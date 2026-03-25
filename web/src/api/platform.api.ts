@@ -23,15 +23,30 @@ import type {
 export const platformApi = {
     // Auth — Admin (email + password)
     login: (email: string, password: string) =>
-        api.post<LoginResponse>('/platform/v1/auth/login/email', { email, password }),
+        api.post<LoginResponse>('/platform/v1/auth/login/email', { email, password }, { skipAuthRedirect: true }),
 
     // Auth — Employee (PIN-only, auto-detect company)
     loginWithPin: (pin: string) =>
-        api.post<LoginResponse>('/attendance/v1/auth/login/pin', { pin }),
+        api.post<LoginResponse>('/attendance/v1/auth/login/pin', { pin }, { skipAuthRedirect: true }),
+
+    refresh: () =>
+        api.post<{ status: string; message: string; data: { token: string; expires_in: number; active_products: string[] } }>(
+            '/platform/v1/auth/refresh',
+            {},
+            { skipAuthRedirect: true },
+        ),
 
     me: () => api.get<MeResponse>('/platform/v1/me'),
     updateMe: (data: { name: string; email: string }) =>
         api.put<MeResponse>('/platform/v1/me', data),
+    updateMyAvatar: (formData: FormData) =>
+        api.post<MeResponse>('/platform/v1/me/avatar', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        }),
+    removeMyAvatar: () =>
+        api.delete<MeResponse>('/platform/v1/me/avatar'),
     changePassword: (data: { current_password: string; new_password: string; new_password_confirmation: string }) =>
         api.put('/platform/v1/me/password', data),
 

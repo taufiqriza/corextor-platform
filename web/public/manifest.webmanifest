@@ -1,0 +1,26 @@
+{
+  "name": "Corextor Employee",
+  "short_name": "Corextor",
+  "description": "Portal employee Corextor untuk absensi, laporan, dan akses kerja harian dalam mode web app.",
+  "start_url": "/pin",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07111E",
+  "theme_color": "#0F5FA6",
+  "orientation": "portrait",
+  "lang": "id",
+  "icons": [
+    {
+      "src": "/corextor-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/corextor-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -15,6 +15,7 @@ class HealthController extends Controller
     public function index()
     {
         $checks = [];
+        $criticalChecks = ['platform_db'];
 
         // Check platform DB
         try {
@@ -40,17 +41,29 @@ class HealthController extends Controller
             $checks['payroll_db'] = 'unreachable';
         }
 
-        $allHealthy = ! in_array('unreachable', $checks);
+        $criticalHealthy = collect($criticalChecks)->every(
+            fn (string $checkName) => ($checks[$checkName] ?? 'unreachable') === 'ok',
+        );
+        $allHealthy = ! in_array('unreachable', $checks, true);
+        $status = ! $criticalHealthy
+            ? 'unhealthy'
+            : ($allHealthy ? 'healthy' : 'degraded');
 
         return ApiResponse::success(
             data: [
                 'service' => 'corextor-api',
                 'version' => '1.0.0',
-                'status' => $allHealthy ? 'healthy' : 'degraded',
+                'status' => $status,
+                'critical' => [
+                    'status' => $criticalHealthy ? 'ok' : 'failed',
+                    'checks' => $criticalChecks,
+                ],
                 'checks' => $checks,
             ],
-            message: $allHealthy ? 'All systems operational' : 'Some systems are degraded',
-            code: $allHealthy ? 200 : 503,
+            message: $status === 'healthy'
+                ? 'All systems operational'
+                : ($status === 'degraded' ? 'Core service healthy, optional modules degraded' : 'Critical services unavailable'),
+            code: $criticalHealthy ? 200 : 503,
         );
     }
 }

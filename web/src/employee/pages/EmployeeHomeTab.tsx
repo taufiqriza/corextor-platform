@@ -81,7 +81,7 @@ export function EmployeeHomeTab({ T, isDesktop, onNavigate }: Props) {
         void fetchDashboard();
     }, [fetchDashboard]);
 
-    const firstName = (user?.name || 'Karyawan').split(' ')[0];
+    const fullName = user?.name || 'Karyawan';
     const initials = (user?.name || 'K')
         .split(' ')
         .filter(Boolean)
@@ -89,6 +89,7 @@ export function EmployeeHomeTab({ T, isDesktop, onNavigate }: Props) {
         .map(word => word[0])
         .join('')
         .toUpperCase();
+    const avatarUrl = user?.avatar_url || '';
 
     const stats = useMemo(() => {
         const total = monthlyTotal;
@@ -241,21 +242,45 @@ export function EmployeeHomeTab({ T, isDesktop, onNavigate }: Props) {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontFamily: "'Sora', sans-serif",
-                                fontSize: isDesktop ? 15 : 13,
-                                fontWeight: 900,
+                                overflow: 'hidden',
                             }}>
-                                {initials}
+                                {avatarUrl ? (
+                                    <img
+                                        src={avatarUrl}
+                                        alt={fullName}
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover',
+                                        }}
+                                    />
+                                ) : (
+                                    <span style={{
+                                        fontFamily: "'Sora', sans-serif",
+                                        fontSize: isDesktop ? 15 : 13,
+                                        fontWeight: 900,
+                                    }}>
+                                        {initials}
+                                    </span>
+                                )}
                             </div>
                             <div style={{ minWidth: 0, flex: 1 }}>
                                 <div style={{
-                                    fontSize: isDesktop ? 18 : 16,
-                                    fontWeight: 800,
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 7,
+                                    minWidth: 0,
                                 }}>
-                                    {firstName}
+                                    <UserRound size={isDesktop ? 15 : 14} />
+                                    <div style={{
+                                        fontSize: isDesktop ? 18 : 16,
+                                        fontWeight: 800,
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                    }}>
+                                        {fullName}
+                                    </div>
                                 </div>
                                 <div style={{
                                     marginTop: 4,

@@ -7,6 +7,7 @@ use App\Modules\Platform\Session\SessionService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\File;
 
 class AuthController extends Controller
 {
@@ -137,6 +138,53 @@ class AuthController extends Controller
         } catch (\RuntimeException $e) {
             return ApiResponse::conflict($e->getMessage());
         }
+    }
+
+    /**
+     * POST /platform/v1/me/avatar
+     *
+     * Upload or replace current user avatar.
+     */
+    public function updateAvatar(Request $request): JsonResponse
+    {
+        $request->validate([
+            'avatar' => ['required', File::image()->max(4096)],
+        ]);
+
+        $userId = (int) $request->attributes->get('auth_user_id');
+        $companyId = $request->attributes->get('auth_company_id');
+
+        $profile = AuthService::updateCurrentUserAvatar(
+            userId: $userId,
+            file: $request->file('avatar'),
+            companyId: $companyId ? (int) $companyId : null,
+        );
+
+        return ApiResponse::success(
+            data: $profile,
+            message: 'Foto profil berhasil diperbarui',
+        );
+    }
+
+    /**
+     * DELETE /platform/v1/me/avatar
+     *
+     * Remove current user avatar.
+     */
+    public function removeAvatar(Request $request): JsonResponse
+    {
+        $userId = (int) $request->attributes->get('auth_user_id');
+        $companyId = $request->attributes->get('auth_company_id');
+
+        $profile = AuthService::removeCurrentUserAvatar(
+            userId: $userId,
+            companyId: $companyId ? (int) $companyId : null,
+        );
+
+        return ApiResponse::success(
+            data: $profile,
+            message: 'Foto profil berhasil dihapus',
+        );
     }
 
     /**

@@ -1,0 +1,122 @@
+name: Deploy Hostinger
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to deploy
+        required: true
+        default: main
+      switch_live:
+        description: Repoint docroots to the new release
+        required: true
+        type: boolean
+        default: false
+      run_migrations:
+        description: Run Laravel migrations during deploy
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    env:
+      VITE_API_URL: ${{ vars.VITE_API_URL }}
+      VITE_MAIN_APP_ORIGIN: ${{ vars.VITE_MAIN_APP_ORIGIN }}
+      VITE_EMPLOYEE_APP_ORIGIN: ${{ vars.VITE_EMPLOYEE_APP_ORIGIN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Pack frontend artifact
+        run: tar -czf "$RUNNER_TEMP/web-dist.tar.gz" -C dist .
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: ${{ runner.temp }}/web-dist.tar.gz
+          if-no-files-found: error
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-web
+    env:
+      SSH_HOST: ${{ vars.HOSTINGER_SSH_HOST }}
+      SSH_PORT: ${{ vars.HOSTINGER_SSH_PORT }}
+      SSH_USER: ${{ vars.HOSTINGER_SSH_USER }}
+      DEPLOY_BASE: ${{ vars.HOSTINGER_DEPLOY_BASE }}
+      PRIMARY_DOCROOT: ${{ vars.HOSTINGER_PRIMARY_DOCROOT }}
+      EMPLOYEE_SUBDIR_NAME: ${{ vars.HOSTINGER_EMPLOYEE_SUBDIR_NAME }}
+      API_SUBDIR_NAME: ${{ vars.HOSTINGER_API_SUBDIR_NAME }}
+      REPO_URL: https://github.com/taufiqriza/corextor-platform.git
+      REPO_REF: ${{ inputs.ref }}
+      SWITCH_LIVE: ${{ inputs.switch_live && '1' || '0' }}
+      RUN_MIGRATIONS: ${{ inputs.run_migrations && '1' || '0' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: ${{ runner.temp }}/artifacts
+
+      - name: Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Generate release id
+        run: echo "RELEASE_ID=$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_ENV"
+
+      - name: Upload deploy assets
+        run: |
+          scp -P "$SSH_PORT" "$RUNNER_TEMP/artifacts/web-dist.tar.gz" "$SSH_USER@$SSH_HOST:$DEPLOY_BASE/artifacts/web-dist-$RELEASE_ID.tar.gz"
+          scp -P "$SSH_PORT" ops/hostinger/remote-deploy.sh "$SSH_USER@$SSH_HOST:/tmp/corextor-remote-deploy.sh"
+
+      - name: Execute remote deploy
+        run: |
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "\
+            chmod +x /tmp/corextor-remote-deploy.sh && \
+            DEPLOY_BASE='$DEPLOY_BASE' \
+            RELEASE_ID='$RELEASE_ID' \
+            REPO_URL='$REPO_URL' \
+            REPO_REF='$REPO_REF' \
+            WEB_ARTIFACT='$DEPLOY_BASE/artifacts/web-dist-$RELEASE_ID.tar.gz' \
+            API_ENV_PATH='$DEPLOY_BASE/shared/api/.env' \
+            PRIMARY_DOCROOT='$PRIMARY_DOCROOT' \
+            EMPLOYEE_SUBDIR_NAME='${EMPLOYEE_SUBDIR_NAME:-app.corextor.com}' \
+            API_SUBDIR_NAME='${API_SUBDIR_NAME:-api.corextor.com}' \
+            SWITCH_DOCROOTS='$SWITCH_LIVE' \
+            RUN_MIGRATIONS='$RUN_MIGRATIONS' \
+            /tmp/corextor-remote-deploy.sh"

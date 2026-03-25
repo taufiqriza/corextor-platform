@@ -32,6 +32,8 @@ Route::prefix('platform/v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
         Route::put('/me', [AuthController::class, 'updateMe']);
+        Route::post('/me/avatar', [AuthController::class, 'updateAvatar']);
+        Route::delete('/me/avatar', [AuthController::class, 'removeAvatar']);
         Route::put('/me/password', [AuthController::class, 'changePassword']);
 
         // ── Super Admin only ──

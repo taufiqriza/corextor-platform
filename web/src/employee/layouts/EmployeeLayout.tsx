@@ -4,11 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuthStore } from '@/store/authStore';
 import { EmployeeBottomNav, type EmployeeTabId } from '@/employee/components/EmployeeBottomNav';
+import { EmployeePwaInstallPrompt } from '@/employee/components/EmployeePwaInstallPrompt';
 import { EmployeeAttendanceTab } from '@/employee/pages/EmployeeAttendanceTab';
 import { EmployeeHistoryTab } from '@/employee/pages/EmployeeHistoryTab';
 import { EmployeeHomeTab } from '@/employee/pages/EmployeeHomeTab';
 import { EmployeeProfileTab } from '@/employee/pages/EmployeeProfileTab';
 import { EmployeeReportTab } from '@/employee/pages/EmployeeReportTab';
+import { getLoginDestination, navigateToResolvedUrl } from '@/lib/appSurface';
+
+const THEME_STORAGE_KEY = 'corextor-theme-mode';
 
 function useIsDesktop() {
     const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768);
@@ -32,6 +36,20 @@ export function EmployeeLayout() {
 
     const [activeTab, setActiveTab] = useState<EmployeeTabId>('home');
     const [showLogout, setShowLogout] = useState(false);
+
+    useEffect(() => {
+        try {
+            const storedMode = localStorage.getItem(THEME_STORAGE_KEY);
+            if (storedMode === 'light' || storedMode === 'dark') return;
+
+            localStorage.setItem(THEME_STORAGE_KEY, 'light');
+            if (isDark) {
+                toggleTheme();
+            }
+        } catch {
+            // Ignore storage failures; employee portal still renders.
+        }
+    }, [isDark, toggleTheme]);
 
     useEffect(() => {
         document.body.style.background = T.bg;
@@ -88,7 +106,7 @@ export function EmployeeLayout() {
 
     const handleLogout = async () => {
         await logout();
-        navigate('/login', { replace: true });
+        navigateToResolvedUrl(getLoginDestination('employee'), navigate);
     };
 
     const renderContent = () => {
@@ -355,6 +373,7 @@ export function EmployeeLayout() {
                 </main>
             </div>
 
+            {!isDesktop && <EmployeePwaInstallPrompt T={T} bottomOffset={102} />}
             {!isDesktop && <EmployeeBottomNav active={activeTab} setActive={setActiveTab} T={T} />}
 
             {showLogout && (
@@ -412,7 +431,7 @@ export function EmployeeLayout() {
                                 lineHeight: 1.6,
                                 color: T.textMuted,
                             }}>
-                                Anda perlu login ulang untuk membuka dashboard, kehadiran, dan riwayat kerja.
+                                Anda akan kembali ke halaman PIN login untuk membuka lagi dashboard, kehadiran, dan riwayat kerja.
                             </p>
                         </div>
 

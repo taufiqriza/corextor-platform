@@ -1,14 +1,15 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuthStore } from '@/store/authStore';
-import { getHomeRoute } from '@/guards/AuthGuard';
+import { getHomeDestination, getLoginDestination, navigateToResolvedUrl } from '@/lib/appSurface';
 import { Lock, Mail, Eye, EyeOff, ArrowRight, Loader2, Fingerprint } from 'lucide-react';
 
 export function LoginPage() {
     const { T, isDark } = useTheme();
     const navigate = useNavigate();
     const { login, isLoading } = useAuthStore();
+    const headerHeight = 72;
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -21,7 +22,7 @@ export function LoginPage() {
         try {
             await login(email, password);
             const user = useAuthStore.getState().user;
-            navigate(getHomeRoute(user?.role), { replace: true });
+            navigateToResolvedUrl(getHomeDestination(user?.role), navigate);
         } catch (err: unknown) {
             const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login failed';
             setError(msg);
@@ -29,7 +30,98 @@ export function LoginPage() {
     };
 
     return (
-        <div className="cx-login-grid" style={{ minHeight: '100vh' }}>
+        <div style={{
+            minHeight: '100vh',
+            background: isDark
+                ? 'linear-gradient(180deg, #07111E 0%, #0B0F1A 100%)'
+                : 'linear-gradient(180deg, #F5F9FF 0%, #EEF4FF 100%)',
+        }}>
+            <header style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 30,
+                height: headerHeight,
+                background: 'rgba(5,10,20,0.92)',
+                backdropFilter: 'blur(24px)',
+                WebkitBackdropFilter: 'blur(24px)',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+            }}>
+                <div style={{
+                    maxWidth: 1200,
+                    height: '100%',
+                    margin: '0 auto',
+                    padding: '0 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 16,
+                }}>
+                    <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 9,
+                            background: 'linear-gradient(135deg, #2563EB 0%, #1d4ed8 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 0 20px rgba(37,99,235,0.5)',
+                        }}>
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                <rect x="2" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.9" />
+                                <rect x="10" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.6" />
+                                <rect x="2" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.6" />
+                                <rect x="10" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.35" />
+                            </svg>
+                        </div>
+                        <span style={{
+                            fontFamily: "'Sora', sans-serif",
+                            fontWeight: 700,
+                            fontSize: 18,
+                            color: '#fff',
+                            letterSpacing: '-0.02em',
+                        }}>
+                            Corextor
+                        </span>
+                    </Link>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Link
+                            to="/"
+                            style={{
+                                color: 'rgba(255,255,255,0.72)',
+                                textDecoration: 'none',
+                                fontSize: 13,
+                                fontWeight: 600,
+                                padding: '8px 14px',
+                                borderRadius: 9,
+                                border: '1px solid rgba(255,255,255,0.12)',
+                            }}
+                        >
+                            Landing Page
+                        </Link>
+                        <a
+                            href={getLoginDestination('employee')}
+                            style={{
+                                color: '#fff',
+                                textDecoration: 'none',
+                                fontSize: 13,
+                                fontWeight: 700,
+                                padding: '8px 14px',
+                                borderRadius: 9,
+                                background: 'linear-gradient(135deg, #2563EB, #1d4ed8)',
+                                boxShadow: '0 4px 16px rgba(37,99,235,0.35)',
+                            }}
+                        >
+                            PIN Karyawan
+                        </a>
+                    </div>
+                </div>
+            </header>
+
+            <div className="cx-login-grid" style={{ minHeight: '100vh', paddingTop: headerHeight }}>
             {/* Left — Hero */}
             <div style={{
                 background: `linear-gradient(135deg, #1E3A5F 0%, #0F2341 50%, #0B1929 100%)`,
@@ -89,7 +181,7 @@ export function LoginPage() {
                         Admin Login
                     </h2>
                     <p style={{ fontSize: 13, color: T.textMuted, marginBottom: 28 }}>
-                        Masuk ke dashboard untuk mengelola platform.
+                        Masuk ke workspace admin untuk mengelola Corextor dan company customer.
                     </p>
 
                     {error && (
@@ -160,7 +252,7 @@ export function LoginPage() {
                             <div style={{ fontSize: 12, fontWeight: 800, color: T.text }}>Karyawan?</div>
                             <div style={{ fontSize: 10, color: T.textMuted, marginTop: 1 }}>Masuk dengan PIN untuk absensi</div>
                         </div>
-                        <button onClick={() => navigate('/pin')} style={{
+                        <button onClick={() => navigateToResolvedUrl(getLoginDestination('employee'), navigate, false)} style={{
                             height: 32, padding: '0 14px', borderRadius: 9,
                             background: `${T.primary}12`, border: `1px solid ${T.primary}35`,
                             color: T.primary, fontSize: 11, fontWeight: 800,
@@ -178,7 +270,13 @@ export function LoginPage() {
             <style>{`
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                 .cx-spin { animation: spin 1s linear infinite; }
+                @media (max-width: 900px) {
+                    .cx-login-grid {
+                        display: block !important;
+                    }
+                }
             `}</style>
+            </div>
         </div>
     );
 }

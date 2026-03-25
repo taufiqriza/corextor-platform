@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuthStore } from '@/store/authStore';
 import { Delete, Fingerprint, Loader2 } from 'lucide-react';
-import { getHomeRoute } from '@/guards/AuthGuard';
+import { getHomeDestination, getLoginDestination, navigateToResolvedUrl } from '@/lib/appSurface';
 
 const PIN_LENGTH = 6;
 const KEYPAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
@@ -31,7 +31,7 @@ export function PinLoginPage() {
             vibrate(50);
             setTimeout(() => {
                 const nextUser = useAuthStore.getState().user;
-                navigate(getHomeRoute(nextUser?.role), { replace: true });
+                navigateToResolvedUrl(getHomeDestination(nextUser?.role), navigate);
             }, 600);
         } catch (err: unknown) {
             const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'PIN tidak valid';
@@ -83,6 +83,26 @@ export function PinLoginPage() {
         }}>
             {/* ── Header ── */}
             <div style={{ padding: '32px 20px 0', textAlign: 'center', flexShrink: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
+                    <Link
+                        to="/"
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            height: 34,
+                            padding: '0 14px',
+                            borderRadius: 999,
+                            border: `1px solid ${T.border}`,
+                            background: isDark ? T.card : '#fff',
+                            color: T.primary,
+                            fontSize: 12,
+                            fontWeight: 800,
+                        }}
+                    >
+                        ← Landing Page
+                    </Link>
+                </div>
                 <div style={{
                     width: 64, height: 64, borderRadius: 20, margin: '0 auto 18px',
                     background: 'linear-gradient(135deg, #1E3A5F, #0F2341)',
@@ -199,7 +219,7 @@ export function PinLoginPage() {
 
             {/* ── Footer ── */}
             <div style={{ padding: '20px 20px 28px', textAlign: 'center', flexShrink: 0 }}>
-                <button onClick={() => navigate('/login')} style={{
+                <button onClick={() => navigateToResolvedUrl(getLoginDestination('company_admin'), navigate, false)} style={{
                     padding: '10px 20px', borderRadius: 12,
                     background: 'transparent',
                     border: `1px solid ${T.border}`,

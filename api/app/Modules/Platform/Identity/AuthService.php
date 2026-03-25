@@ -7,7 +7,10 @@ use App\Modules\Platform\Membership\MembershipService;
 use App\Modules\Platform\Session\SessionService;
 use App\Modules\Platform\Audit\AuditService;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AuthService
 {
@@ -143,6 +146,7 @@ class AuthService
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'avatar_url' => self::publicAvatarUrl($user->avatar_url),
                 'role' => $role,
                 'current_company_id' => $company?->id,
                 'active_products' => $activeProducts,
@@ -200,6 +204,7 @@ class AuthService
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'avatar_url' => self::publicAvatarUrl($user->avatar_url),
                 'role' => $user->platform_role,
                 'current_company_id' => $companyId,
                 'active_products' => [],
@@ -238,6 +243,88 @@ class AuthService
         AuditService::platform('auth.password_updated', [
             'updated_fields' => ['password'],
         ], $companyId);
+    }
+
+    /**
+     * Upload and replace current user avatar.
+     */
+    public static function updateCurrentUserAvatar(
+        int $userId,
+        UploadedFile $file,
+        ?int $companyId = null,
+    ): array {
+        $user = User::active()->find($userId);
+
+        if (! $user) {
+            throw new \RuntimeException('User tidak ditemukan atau tidak aktif.');
+        }
+
+        self::deleteStoredAvatarIfManaged($user->avatar_url);
+
+        $extension = $file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg';
+        $path = $file->storeAs(
+            "avatars/users/{$userId}",
+            'avatar-'.time().'.'.$extension,
+            'public',
+        );
+
+        $user->update([
+            'avatar_url' => $path,
+        ]);
+
+        AuditService::platform('auth.avatar_updated', [
+            'updated_fields' => ['avatar_url'],
+        ], $companyId);
+
+        return self::getCurrentUserProfile($userId, $companyId ?? 0) ?? [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'avatar_url' => self::publicAvatarUrl($user->avatar_url),
+                'role' => $user->platform_role,
+                'current_company_id' => $companyId,
+                'active_products' => [],
+            ],
+            'company' => null,
+        ];
+    }
+
+    /**
+     * Remove current user avatar.
+     */
+    public static function removeCurrentUserAvatar(
+        int $userId,
+        ?int $companyId = null,
+    ): array {
+        $user = User::active()->find($userId);
+
+        if (! $user) {
+            throw new \RuntimeException('User tidak ditemukan atau tidak aktif.');
+        }
+
+        self::deleteStoredAvatarIfManaged($user->avatar_url);
+
+        $user->update([
+            'avatar_url' => null,
+        ]);
+
+        AuditService::platform('auth.avatar_removed', [
+            'updated_fields' => ['avatar_url'],
+        ], $companyId);
+
+        return self::getCurrentUserProfile($userId, $companyId ?? 0) ?? [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'avatar_url' => null,
+                'role' => $user->platform_role,
+                'current_company_id' => $companyId,
+                'active_products' => [],
+            ],
+            'company' => null,
+        ];
     }
 
     // ── Private Helpers ──
@@ -281,6 +368,7 @@ class AuthService
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'avatar_url' => self::publicAvatarUrl($user->avatar_url),
                 'role' => $role ?? 'super_admin',
                 'current_company_id' => $companyId ?: null,
                 'active_products' => $activeProducts,
@@ -293,5 +381,59 @@ class AuthService
                 ] : null,
             ],
         ];
+    }
+
+    public static function publicAvatarUrl(?string $storedValue): ?string
+    {
+        if (! $storedValue) {
+            return null;
+        }
+
+        if (Str::startsWith($storedValue, ['http://', 'https://']) && ! str_contains($storedValue, '/storage/avatars/users/')) {
+            return $storedValue;
+        }
+
+        $publicPath = self::extractManagedAvatarPath($storedValue);
+
+        if (! $publicPath) {
+            return $storedValue;
+        }
+
+        $request = request();
+        $baseUrl = $request?->getSchemeAndHttpHost();
+
+        if (! $baseUrl) {
+            return '/storage/'.$publicPath;
+        }
+
+        return rtrim($baseUrl, '/').'/storage/'.$publicPath;
+    }
+
+    private static function deleteStoredAvatarIfManaged(?string $avatarUrl): void
+    {
+        $relativePath = self::extractManagedAvatarPath($avatarUrl);
+
+        if ($relativePath) {
+            Storage::disk('public')->delete($relativePath);
+        }
+    }
+
+    private static function extractManagedAvatarPath(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        if (Str::startsWith($value, 'avatars/users/')) {
+            return $value;
+        }
+
+        $path = parse_url($value, PHP_URL_PATH);
+
+        if (! is_string($path) || ! str_contains($path, '/storage/avatars/users/')) {
+            return null;
+        }
+
+        return ltrim(substr($path, strpos($path, '/storage/') + 9), '/');
     }
 }
