@@ -6,6 +6,7 @@ use App\Modules\Platform\Audit\AuditService;
 use App\Modules\Platform\Identity\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Service layer for managing company members (tenant users).
@@ -58,26 +59,19 @@ class MemberService
      */
     public static function addMember(int $companyId, array $data): CompanyMembership
     {
+        return self::addMemberWithMeta($companyId, $data)['membership'];
+    }
+
+    public static function addMemberWithMeta(int $companyId, array $data): array
+    {
         $role = $data['role'] ?? 'employee';
 
         if (! in_array($role, self::COMPANY_ROLES)) {
             throw new \InvalidArgumentException("Invalid company role: {$role}");
         }
 
-        // Find or create user
-        $user = User::where('email', $data['email'])->first();
-
-        if (! $user) {
-            // Create new user
-            $temporaryPassword = $data['password'] ?? 'Welcome2026!';
-            $user = User::create([
-                'name'          => $data['name'] ?? explode('@', $data['email'])[0],
-                'email'         => $data['email'],
-                'password'      => Hash::make($temporaryPassword),
-                'platform_role' => 'standard',
-                'status'        => 'active',
-            ]);
-        }
+        $resolvedUser = self::resolveUserByEmail($data);
+        $user = $resolvedUser['user'];
 
         // Check for existing membership
         $existing = CompanyMembership::where('company_id', $companyId)
@@ -101,25 +95,122 @@ class MemberService
                 'role'          => $role,
             ], $companyId);
 
-            return $existing->fresh()->load('user');
+            return [
+                'membership' => $existing->fresh()->load('user'),
+                'user_created' => $resolvedUser['user_created'],
+                'temporary_password' => $resolvedUser['temporary_password'],
+            ];
         }
 
         // Create new membership
+        return self::createMembership(
+            companyId: $companyId,
+            user: $user,
+            role: $role,
+            userCreated: $resolvedUser['user_created'],
+            temporaryPassword: $resolvedUser['temporary_password'],
+        );
+    }
+
+    /**
+     * Ensure a company has an active membership for the given email.
+     *
+     * Used by product onboarding flows that should not fail when the user
+     * is already an active member of the company.
+     */
+    public static function ensureMember(int $companyId, array $data): CompanyMembership
+    {
+        return self::ensureMemberWithMeta($companyId, $data)['membership'];
+    }
+
+    public static function ensureMemberWithMeta(int $companyId, array $data): array
+    {
+        $role = $data['role'] ?? 'employee';
+
+        if (! in_array($role, self::COMPANY_ROLES, true)) {
+            throw new \InvalidArgumentException("Invalid company role: {$role}");
+        }
+
+        $email = strtolower(trim((string) ($data['email'] ?? '')));
+
+        if ($email === '') {
+            throw new \InvalidArgumentException('Email wajib diisi.');
+        }
+
+        $resolvedUser = self::resolveUserByEmail([
+            ...$data,
+            'email' => $email,
+        ]);
+        $user = $resolvedUser['user'];
+
+        $membership = CompanyMembership::where('company_id', $companyId)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $membership) {
+            return self::createMembership(
+                companyId: $companyId,
+                user: $user,
+                role: $role,
+                userCreated: $resolvedUser['user_created'],
+                temporaryPassword: $resolvedUser['temporary_password'],
+            );
+        }
+
+        $updates = [];
+
+        if (! $membership->isActive()) {
+            $updates['status'] = 'active';
+        }
+
+        if ($membership->role !== $role) {
+            $updates['role'] = $role;
+        }
+
+        if (! empty($updates)) {
+            $membership->update($updates);
+
+            AuditService::platform('member.ensured', [
+                'membership_id' => $membership->id,
+                'user_id' => $membership->user_id,
+                'company_id' => $companyId,
+                'changes' => $updates,
+            ], $companyId);
+        }
+
+        return [
+            'membership' => $membership->fresh()->load('user'),
+            'user_created' => $resolvedUser['user_created'],
+            'temporary_password' => $resolvedUser['temporary_password'],
+        ];
+    }
+
+    private static function createMembership(
+        int $companyId,
+        User $user,
+        string $role,
+        bool $userCreated,
+        ?string $temporaryPassword,
+    ): array {
         $membership = CompanyMembership::create([
             'company_id' => $companyId,
-            'user_id'    => $user->id,
-            'role'       => $role,
-            'status'     => 'active',
+            'user_id' => $user->id,
+            'role' => $role,
+            'status' => 'active',
         ]);
 
         AuditService::platform('member.added', [
             'membership_id' => $membership->id,
-            'user_id'       => $user->id,
-            'company_id'    => $companyId,
-            'role'          => $role,
+            'user_id' => $user->id,
+            'company_id' => $companyId,
+            'role' => $role,
         ], $companyId);
 
-        return $membership->load('user');
+        return [
+            'membership' => $membership->load('user'),
+            'user_created' => $userCreated,
+            'temporary_password' => $temporaryPassword,
+        ];
     }
 
     /**
@@ -172,5 +263,40 @@ class MemberService
             'membership_id' => $membership->id,
             'user_id'       => $membership->user_id,
         ], $companyId);
+    }
+
+    private static function resolveUserByEmail(array $data): array
+    {
+        $email = strtolower(trim((string) ($data['email'] ?? '')));
+
+        if ($email === '') {
+            throw new \InvalidArgumentException('Email wajib diisi.');
+        }
+
+        $user = User::where('email', $email)->first();
+
+        if ($user) {
+            return [
+                'user' => $user,
+                'user_created' => false,
+                'temporary_password' => null,
+            ];
+        }
+
+        $temporaryPassword = (string) ($data['password'] ?? Str::upper(Str::random(12)));
+
+        $user = User::create([
+            'name' => trim((string) ($data['name'] ?? explode('@', $email)[0])),
+            'email' => $email,
+            'password' => Hash::make($temporaryPassword),
+            'platform_role' => 'standard',
+            'status' => 'active',
+        ]);
+
+        return [
+            'user' => $user,
+            'user_created' => true,
+            'temporary_password' => $temporaryPassword,
+        ];
     }
 }

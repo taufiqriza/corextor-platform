@@ -73,9 +73,15 @@ class PlatformSeeder extends Seeder
         // ── Product Catalog ──
         $attendanceProductId = DB::connection('platform')->table('products')->insertGetId([
             'code' => 'attendance',
+            'workspace_key' => 'attendance',
             'name' => 'Attendance',
+            'description' => 'Attendance management for office and field teams.',
             'status' => 'active',
             'app_url' => 'https://attendance.corextor.com',
+            'metadata_json' => json_encode([
+                'admin_surface' => 'internal',
+                'employee_surface' => 'mobile',
+            ]),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -83,11 +89,15 @@ class PlatformSeeder extends Seeder
         $basicPlanId = DB::connection('platform')->table('plans')->insertGetId([
             'product_id' => $attendanceProductId,
             'code' => 'attendance-basic-monthly',
+            'family_code' => 'attendance-basic-monthly',
             'name' => 'Attendance Basic (Monthly)',
             'billing_cycle' => 'monthly',
             'price' => 99000,
             'currency' => 'IDR',
             'status' => 'active',
+            'version_number' => 1,
+            'is_latest' => true,
+            'effective_from' => now()->toDateString(),
             'features_json' => json_encode([
                 'max_users' => 25,
                 'max_branches' => 3,
@@ -101,11 +111,15 @@ class PlatformSeeder extends Seeder
         DB::connection('platform')->table('plans')->insert([
             'product_id' => $attendanceProductId,
             'code' => 'attendance-pro-monthly',
+            'family_code' => 'attendance-pro-monthly',
             'name' => 'Attendance Pro (Monthly)',
             'billing_cycle' => 'monthly',
             'price' => 249000,
             'currency' => 'IDR',
             'status' => 'active',
+            'version_number' => 1,
+            'is_latest' => true,
+            'effective_from' => now()->toDateString(),
             'features_json' => json_encode([
                 'max_users' => 100,
                 'max_branches' => 10,

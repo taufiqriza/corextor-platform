@@ -115,7 +115,8 @@ class CompanyController extends Controller
         ]);
 
         try {
-            $membership = MemberService::addMember($id, $request->only(['email', 'name', 'role']));
+            $result = MemberService::addMemberWithMeta($id, $request->only(['email', 'name', 'role']));
+            $membership = $result['membership'];
 
             return ApiResponse::created([
                 'id' => $membership->id,
@@ -127,6 +128,12 @@ class CompanyController extends Controller
                     'name' => $membership->user->name,
                     'email' => $membership->user->email,
                 ] : null,
+                'credentials' => $result['user_created']
+                    ? [
+                        'email' => $membership->user?->email,
+                        'temporary_password' => $result['temporary_password'],
+                    ]
+                    : null,
             ]);
         } catch (\RuntimeException $e) {
             return ApiResponse::conflict($e->getMessage());

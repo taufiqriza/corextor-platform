@@ -6,6 +6,7 @@ use App\Modules\Platform\Audit\AuditService;
 use App\Modules\Platform\Identity\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Service layer for managing internal Corextor team members.
@@ -63,6 +64,11 @@ class TeamService
      */
     public static function invite(array $data): User
     {
+        return self::inviteWithMeta($data)['user'];
+    }
+
+    public static function inviteWithMeta(array $data): array
+    {
         $role = $data['platform_role'] ?? 'platform_staff';
 
         if (! in_array($role, self::ASSIGNABLE_ROLES)) {
@@ -75,7 +81,7 @@ class TeamService
             throw new \RuntimeException("Email {$data['email']} sudah terdaftar.");
         }
 
-        $temporaryPassword = $data['password'] ?? 'Corextor2026!';
+        $temporaryPassword = (string) ($data['password'] ?? Str::upper(Str::random(12)));
 
         $user = User::create([
             'name'          => $data['name'],
@@ -91,7 +97,10 @@ class TeamService
             'role'            => $role,
         ]);
 
-        return $user;
+        return [
+            'user' => $user,
+            'temporary_password' => $temporaryPassword,
+        ];
     }
 
     /**

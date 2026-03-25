@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
-    Activity, AlertCircle, Building2, CheckCircle2, Clock, CreditCard,
-    MapPin, Package, TrendingUp, Users,
+    Activity, AlertCircle, Building2, CheckCircle2, CreditCard,
+    Package, TrendingUp, Users,
 } from 'lucide-react';
 import type { Theme } from '@/theme/tokens';
-import { platformApi, attendanceApi } from '@/api/platform.api';
+import { platformApi } from '@/api/platform.api';
 import { useAuthStore } from '@/store/authStore';
 
 /* ═══════════════════ Types ═══════════════════ */
@@ -18,31 +18,25 @@ interface Props {
 export function DashboardPanel({ T, isDesktop, onNavigate }: Props) {
     const user = useAuthStore(s => s.user);
     const isSuperAdmin = user?.role === 'super_admin';
-    const hasAttendance = user?.active_products?.includes('attendance');
-    const [stats, setStats] = useState({ companies: 0, products: 0, branches: 0, attUsers: 0, todayRecords: 0, activeSubs: 0 });
+    const isPlatformTeam = ['super_admin', 'platform_staff'].includes(user?.role ?? '');
+    const [stats, setStats] = useState({ companies: 0, products: 0, activeSubs: 0 });
     const [loading, setLoading] = useState(true);
     const [recentInvoices, setRecentInvoices] = useState<any[]>([]);
 
     useEffect(() => {
         const promises: Promise<any>[] = [];
 
-        if (isSuperAdmin) {
+        if (isPlatformTeam) {
             promises.push(platformApi.getCompanies().catch(() => ({ data: { data: { total: 0 } } })));
             promises.push(platformApi.getProductOverview().catch(() => ({ data: { data: [] } })));
             promises.push(platformApi.getInvoices().catch(() => ({ data: { data: [] } })));
-        }
-
-        if (hasAttendance) {
-            promises.push(attendanceApi.getBranches().catch(() => ({ data: { data: [] } })));
-            promises.push(attendanceApi.getUsers().catch(() => ({ data: { data: [] } })));
-            promises.push(attendanceApi.getReport().catch(() => ({ data: { data: [] } })));
         }
 
         Promise.all(promises).then(results => {
             let idx = 0;
             const newStats = { ...stats };
 
-            if (isSuperAdmin) {
+            if (isPlatformTeam) {
                 const compData = results[idx]?.data?.data;
                 newStats.companies = compData?.total ?? compData?.length ?? (Array.isArray(compData) ? compData.length : 0);
                 idx++;
@@ -55,18 +49,9 @@ export function DashboardPanel({ T, isDesktop, onNavigate }: Props) {
                 idx++;
             }
 
-            if (hasAttendance) {
-                newStats.branches = Array.isArray(results[idx]?.data?.data) ? results[idx].data.data.length : 0;
-                idx++;
-                newStats.attUsers = Array.isArray(results[idx]?.data?.data) ? results[idx].data.data.length : 0;
-                idx++;
-                newStats.todayRecords = Array.isArray(results[idx]?.data?.data) ? results[idx].data.data.length : 0;
-                idx++;
-            }
-
             setStats(newStats);
         }).finally(() => setLoading(false));
-    }, [isSuperAdmin, hasAttendance]);
+    }, [isPlatformTeam]);
 
     const greeting = () => {
         const h = new Date().getHours();
@@ -93,28 +78,18 @@ export function DashboardPanel({ T, isDesktop, onNavigate }: Props) {
 
     /* ═══ Stat Cards Config ═══ */
     const statCards = [
-        ...(isSuperAdmin ? [
+        ...(isPlatformTeam ? [
             { label: 'Companies', value: stats.companies, icon: Building2, tone: T.primary, desc: 'Total tenant', nav: 'companies' },
             { label: 'Products', value: stats.products, icon: Package, tone: T.info, desc: 'Produk aktif', nav: 'subscriptions' },
             { label: 'Active Subs', value: stats.activeSubs, icon: CheckCircle2, tone: T.success, desc: 'Subscriber aktif', nav: 'subscriptions' },
         ] : []),
-        ...(hasAttendance ? [
-            { label: 'Branches', value: stats.branches, icon: MapPin, tone: T.gold, desc: 'Cabang terdaftar', nav: 'branches' },
-            { label: 'Att. Users', value: stats.attUsers, icon: Users, tone: '#A855F7', desc: 'Karyawan absensi', nav: 'att-users' },
-            { label: 'Today', value: stats.todayRecords, icon: Clock, tone: T.danger, desc: 'Record hari ini', nav: 'att-report' },
-        ] : []),
     ];
 
     const quickActions = [
-        ...(isSuperAdmin ? [
+        ...(isPlatformTeam ? [
             { label: 'Kelola Companies', desc: 'Lihat daftar tenant', color: T.primary, icon: Building2, nav: 'companies' },
             { label: 'Product Overview', desc: 'Lihat produk & subscriber', color: T.info, icon: Package, nav: 'subscriptions' },
             { label: 'Lihat Invoices', desc: 'Tagihan & pembayaran', color: T.gold, icon: CreditCard, nav: 'invoices' },
-        ] : []),
-        ...(hasAttendance ? [
-            { label: 'Lihat Report', desc: 'Laporan attendance', color: T.success, icon: TrendingUp, nav: 'att-report' },
-            { label: 'Manage Branches', desc: 'CRUD cabang', color: T.gold, icon: MapPin, nav: 'branches' },
-            { label: 'Kelola Users', desc: 'Karyawan absensi', color: '#A855F7', icon: Users, nav: 'att-users' },
         ] : []),
     ];
 
@@ -139,8 +114,8 @@ export function DashboardPanel({ T, isDesktop, onNavigate }: Props) {
                     </h2>
                     <p style={{ fontSize: 12, color: '#94A3B8', lineHeight: 1.6, maxWidth: 500 }}>
                         {isSuperAdmin
-                            ? 'Super Admin — Kelola semua company, subscription, dan produk dari sini.'
-                            : `${user?.role ?? 'Admin'} — Kelola operasi perusahaan Anda.`
+                            ? 'Super Admin — Kelola tenant, product catalog, subscription, dan billing platform dari sini.'
+                            : `${user?.role ?? 'Admin'} — Pantau operasi SaaS Corextor dan workspace tenant.`
                         }
                     </p>
                     {/* Quick Info badges */}

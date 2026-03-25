@@ -5,12 +5,22 @@ export interface AuthUser {
     role: string;
     current_company_id: number | null;
     active_products: string[];
+    attendance_user_id?: number;
+    branch_id?: number;
     company?: {
         id: number;
         code: string;
         name: string;
         status: string;
+        logo_url?: string | null;
     };
+}
+
+export interface MePayload {
+    user: Omit<AuthUser, 'company'> & {
+        company?: AuthUser['company'];
+    };
+    company: AuthUser['company'] | null;
 }
 
 export interface LoginResponse {
@@ -26,5 +36,5 @@ export interface LoginResponse {
 
 export interface MeResponse {
     status: string;
-    data: AuthUser;
+    data: MePayload;
 }

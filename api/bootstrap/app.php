@@ -22,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::prefix('api')
                 ->middleware('api')
                 ->group(base_path('routes/attendance.php'));
+
+            Route::prefix('api')
+                ->middleware('api')
+                ->group(base_path('routes/payroll.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -29,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'jwt.auth' => \App\Http\Middleware\JwtAuth::class,
             'role' => \App\Http\Middleware\CheckRole::class,
             'attendance.entitled' => \App\Http\Middleware\AttendanceEntitlement::class,
+            'product.entitled' => \App\Http\Middleware\ProductEntitlement::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -49,4 +54,3 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->create();
-

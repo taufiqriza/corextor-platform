@@ -31,6 +31,8 @@ Route::prefix('platform/v1')->group(function () {
         // Auth
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
+        Route::put('/me', [AuthController::class, 'updateMe']);
+        Route::put('/me/password', [AuthController::class, 'changePassword']);
 
         // ── Super Admin only ──
         Route::middleware('role:super_admin')->group(function () {
@@ -61,11 +63,13 @@ Route::prefix('platform/v1')->group(function () {
             // Company Subscriptions
             Route::get('/companies/{id}/subscriptions', [SubscriptionController::class, 'index']);
             Route::post('/companies/{id}/subscriptions', [SubscriptionController::class, 'store']);
+            Route::put('/companies/{id}/subscriptions/{subscriptionId}', [SubscriptionController::class, 'update']);
 
             // Product Catalog
             Route::get('/products', [SubscriptionController::class, 'products']);
             Route::get('/products/overview', [SubscriptionController::class, 'productOverview']);
             Route::get('/plans', [SubscriptionController::class, 'plans']);
+            Route::put('/plans/{planId}', [SubscriptionController::class, 'updatePlan']);
             Route::get('/bundles', [SubscriptionController::class, 'bundles']);
         });
 

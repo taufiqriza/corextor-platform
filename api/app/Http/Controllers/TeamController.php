@@ -44,7 +44,8 @@ class TeamController extends Controller
         ]);
 
         try {
-            $user = TeamService::invite($request->only(['name', 'email', 'platform_role']));
+            $result = TeamService::inviteWithMeta($request->only(['name', 'email', 'platform_role']));
+            $user = $result['user'];
 
             return ApiResponse::created([
                 'id'            => $user->id,
@@ -52,6 +53,10 @@ class TeamController extends Controller
                 'email'         => $user->email,
                 'platform_role' => $user->platform_role,
                 'status'        => $user->status,
+                'credentials'   => [
+                    'email' => $user->email,
+                    'temporary_password' => $result['temporary_password'],
+                ],
             ]);
         } catch (\RuntimeException $e) {
             return ApiResponse::conflict($e->getMessage());

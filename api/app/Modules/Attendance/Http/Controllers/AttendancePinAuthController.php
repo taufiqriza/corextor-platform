@@ -23,7 +23,7 @@ class AttendancePinAuthController extends Controller
     {
         $request->validate([
             'company_id' => 'nullable|integer',
-            'pin' => 'required|string|min:4|max:8',
+            'pin' => ['required', 'string', 'regex:/^[0-9]{6}$/'],
         ]);
 
         $companyId = $request->input('company_id');
@@ -44,7 +44,7 @@ class AttendancePinAuthController extends Controller
         }
 
         if (! $result) {
-            return ApiResponse::unauthenticated('PIN tidak valid atau akses ditolak');
+            return ApiResponse::unauthenticated('PIN 6 digit tidak valid atau akses ditolak');
         }
 
         $cookie = SessionService::makeRefreshCookie($result['refresh_token']);

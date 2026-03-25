@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Hash;
 
 class PinService
 {
+    public const PIN_LENGTH = 6;
+
     /**
      * Hash a PIN for storage.
      */
@@ -45,25 +47,44 @@ class PinService
     public static function resetPin(int $attendanceUserId, int $companyId, string $newPin): AttendanceUser
     {
         $attendanceUser = AttendanceUser::forCompany($companyId)->findOrFail($attendanceUserId);
-
-        // Check if PIN is already in use by another user (global uniqueness)
-        $globalLookup = self::generateGlobalPinLookup($newPin);
-        $existing = AttendanceUser::where('global_pin_lookup', $globalLookup)
-            ->where('id', '!=', $attendanceUser->id)
-            ->first();
-
-        if ($existing) {
-            throw new \RuntimeException('PIN ini sudah digunakan oleh karyawan lain. Silakan gunakan PIN yang berbeda.');
-        }
-
-        $attendanceUser->update([
-            'pin_hash' => self::hashPin($newPin),
-            'pin_lookup' => self::generatePinLookup($companyId, $newPin),
-            'global_pin_lookup' => $globalLookup,
-        ]);
+        self::applyPinUpdate($attendanceUser, $companyId, $newPin);
 
         AuditService::attendance('attendance_user.pin_reset', [
             'attendance_user_id' => $attendanceUser->id,
+        ], $companyId);
+
+        return $attendanceUser;
+    }
+
+    /**
+     * Change PIN for the currently authenticated attendance user.
+     */
+    public static function changeOwnPin(
+        int $platformUserId,
+        int $companyId,
+        string $currentPin,
+        string $newPin,
+    ): AttendanceUser {
+        self::assertSixDigitPin($currentPin);
+        $attendanceUser = AttendanceUserService::findByPlatformUser($platformUserId, $companyId);
+
+        if (! $attendanceUser) {
+            throw new \RuntimeException('Profil attendance aktif tidak ditemukan.');
+        }
+
+        if (! $attendanceUser->pin_hash) {
+            throw new \RuntimeException('PIN absensi belum tersedia. Hubungi admin perusahaan.');
+        }
+
+        if (! Hash::check($currentPin, $attendanceUser->pin_hash)) {
+            throw new \RuntimeException('PIN saat ini tidak sesuai.');
+        }
+
+        self::applyPinUpdate($attendanceUser, $companyId, $newPin);
+
+        AuditService::attendance('attendance_user.pin_changed', [
+            'attendance_user_id' => $attendanceUser->id,
+            'self_service' => true,
         ], $companyId);
 
         return $attendanceUser;
@@ -227,7 +248,46 @@ class PinService
                 'active_products' => $activeProducts,
                 'attendance_user_id' => $attendanceUser->id,
                 'branch_id' => $attendanceUser->branch_id,
+                'company' => [
+                    'id' => $company->id,
+                    'code' => $company->code,
+                    'name' => $company->name,
+                    'status' => $company->status,
+                    'logo_url' => $company->logo_url,
+                ],
             ],
         ];
+    }
+
+    /**
+     * Persist a new PIN after uniqueness checks pass.
+     */
+    private static function applyPinUpdate(
+        AttendanceUser $attendanceUser,
+        int $companyId,
+        string $newPin,
+    ): void {
+        self::assertSixDigitPin($newPin);
+        $globalLookup = self::generateGlobalPinLookup($newPin);
+        $existing = AttendanceUser::where('global_pin_lookup', $globalLookup)
+            ->where('id', '!=', $attendanceUser->id)
+            ->first();
+
+        if ($existing) {
+            throw new \RuntimeException('PIN ini sudah digunakan oleh karyawan lain. Silakan gunakan PIN yang berbeda.');
+        }
+
+        $attendanceUser->update([
+            'pin_hash' => self::hashPin($newPin),
+            'pin_lookup' => self::generatePinLookup($companyId, $newPin),
+            'global_pin_lookup' => $globalLookup,
+        ]);
+    }
+
+    public static function assertSixDigitPin(string $pin): void
+    {
+        if (! preg_match('/^[0-9]{6}$/', $pin)) {
+            throw new \InvalidArgumentException('PIN harus terdiri dari 6 digit angka.');
+        }
     }
 }

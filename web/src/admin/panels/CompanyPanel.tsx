@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import type { Theme } from '@/theme/tokens';
 import { platformApi } from '@/api/platform.api';
+import { AdminCompanyProductWorkspace } from '@/admin/panels/AdminCompanyProductWorkspace';
 
 /* ═══════════════════ Types ═══════════════════ */
 interface Props { T: Theme; isDesktop: boolean; }
@@ -27,8 +28,20 @@ interface Subscription {
     status: string;
     starts_at: string;
     billing_cycle: string;
+    product?: { name: string; code: string; workspace_key?: string | null; app_url?: string | null };
+    plan?: { name: string; code: string; price: number; billing_cycle?: string; status?: string; version_number?: number; family_code?: string };
+}
+
+interface PlanOption {
+    id: number;
+    name: string;
+    code: string;
+    family_code?: string;
+    version_number?: number;
+    price: number;
+    billing_cycle: string;
+    status?: string;
     product?: { name: string; code: string };
-    plan?: { name: string; code: string; price: number };
 }
 
 interface Membership {
@@ -40,7 +53,7 @@ interface Membership {
 }
 
 type ViewMode = 'list' | 'detail';
-type DetailTab = 'overview' | 'members' | 'subscriptions';
+type DetailTab = 'overview' | 'members' | 'subscriptions' | 'workspaces';
 
 /* ═══════════════════ Helpers ═══════════════════ */
 function getErrorMsg(err: unknown): string {
@@ -82,11 +95,17 @@ export function CompanyPanel({ T, isDesktop }: Props) {
 
     // Add Subscription modal
     const [showAddSubModal, setShowAddSubModal] = useState(false);
-    const [plans, setPlans] = useState<{ id: number; name: string; code: string; price: number; billing_cycle: string; product?: { name: string; code: string } }[]>([]);
+    const [plans, setPlans] = useState<PlanOption[]>([]);
     const [plansLoading, setPlansLoading] = useState(false);
     const [selectedPlanCode, setSelectedPlanCode] = useState('');
     const [addingSubscription, setAddingSubscription] = useState(false);
     const [addSubError, setAddSubError] = useState('');
+    const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+    const [editSubscriptionPlanCode, setEditSubscriptionPlanCode] = useState('');
+    const [editSubscriptionStartsAt, setEditSubscriptionStartsAt] = useState('');
+    const [editSubscriptionStatus, setEditSubscriptionStatus] = useState<'active' | 'trial' | 'suspended' | 'expired' | 'cancelled'>('active');
+    const [updatingSubscription, setUpdatingSubscription] = useState(false);
+    const [editSubError, setEditSubError] = useState('');
 
     // Member management
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -95,6 +114,7 @@ export function CompanyPanel({ T, isDesktop }: Props) {
     const [memberRole, setMemberRole] = useState<'company_admin' | 'employee'>('employee');
     const [addingMember, setAddingMember] = useState(false);
     const [addMemberError, setAddMemberError] = useState('');
+    const [memberCredentials, setMemberCredentials] = useState<{ email: string; temporary_password: string } | null>(null);
     const [memberMenu, setMemberMenu] = useState<number | null>(null);
     const [memberStats, setMemberStats] = useState({ total: 0, admins: 0, employees: 0, active: 0 });
 
@@ -133,6 +153,18 @@ export function CompanyPanel({ T, isDesktop }: Props) {
     }), [companies]);
 
     /* ── Detail ── */
+    const loadSubscriptions = async (companyId: number) => {
+        setSubsLoading(true);
+        try {
+            const res = await platformApi.getCompanySubscriptions(companyId);
+            setSubs(res.data?.data ?? []);
+        } catch {
+            setSubs([]);
+        } finally {
+            setSubsLoading(false);
+        }
+    };
+
     const openDetail = async (company: Company) => {
         setSelected(company);
         setView('detail');
@@ -140,13 +172,7 @@ export function CompanyPanel({ T, isDesktop }: Props) {
         setSubs([]);
         setMembers([]);
 
-        // Load subs
-        setSubsLoading(true);
-        try {
-            const res = await platformApi.getCompanySubscriptions(company.id);
-            setSubs(res.data?.data ?? []);
-        } catch { setSubs([]); }
-        finally { setSubsLoading(false); }
+        await loadSubscriptions(company.id);
 
         // Load members
         loadMembers(company.id);
@@ -184,10 +210,7 @@ export function CompanyPanel({ T, isDesktop }: Props) {
     };
 
     /* ── Add Subscription ── */
-    const openAddSubModal = async () => {
-        setShowAddSubModal(true);
-        setAddSubError('');
-        setSelectedPlanCode('');
+    const ensurePlansLoaded = async () => {
         if (plans.length === 0) {
             setPlansLoading(true);
             try {
@@ -196,6 +219,13 @@ export function CompanyPanel({ T, isDesktop }: Props) {
             } catch { setPlans([]); }
             finally { setPlansLoading(false); }
         }
+    };
+
+    const openAddSubModal = async () => {
+        setShowAddSubModal(true);
+        setAddSubError('');
+        setSelectedPlanCode('');
+        await ensurePlansLoaded();
     };
 
     const handleAddSubscription = async () => {
@@ -213,12 +243,40 @@ export function CompanyPanel({ T, isDesktop }: Props) {
             });
             setShowAddSubModal(false);
             setFeedback({ kind: 'success', msg: 'Subscription berhasil ditambahkan!' });
-            // Reload subs
-            const res = await platformApi.getCompanySubscriptions(selected.id);
-            setSubs(res.data?.data ?? []);
+            await loadSubscriptions(selected.id);
         } catch (err) {
             setAddSubError(getErrorMsg(err));
         } finally { setAddingSubscription(false); }
+    };
+
+    const openEditSubscriptionModal = async (subscription: Subscription) => {
+        await ensurePlansLoaded();
+        setEditingSubscription(subscription);
+        setEditSubscriptionPlanCode(subscription.plan?.code ?? '');
+        setEditSubscriptionStartsAt(subscription.starts_at ? new Date(subscription.starts_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+        setEditSubscriptionStatus((subscription.status as typeof editSubscriptionStatus) ?? 'active');
+        setEditSubError('');
+    };
+
+    const handleUpdateSubscription = async () => {
+        if (!selected || !editingSubscription || !editSubscriptionPlanCode) return;
+
+        setUpdatingSubscription(true);
+        setEditSubError('');
+        try {
+            await platformApi.updateCompanySubscription(selected.id, editingSubscription.id, {
+                plan_code: editSubscriptionPlanCode,
+                starts_at: editSubscriptionStartsAt || undefined,
+                status: editSubscriptionStatus,
+            });
+            setEditingSubscription(null);
+            setFeedback({ kind: 'success', msg: 'Subscription berhasil diperbarui realtime.' });
+            await loadSubscriptions(selected.id);
+        } catch (err) {
+            setEditSubError(getErrorMsg(err));
+        } finally {
+            setUpdatingSubscription(false);
+        }
     };
 
     /* ═══ Styles ═══ */
@@ -297,6 +355,17 @@ export function CompanyPanel({ T, isDesktop }: Props) {
             width: 32, height: 32, borderRadius: 9, border: `1px solid ${T.border}`, background: T.bgAlt,
             color: T.textSub, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         } as React.CSSProperties,
+        input: {
+            width: '100%',
+            height: 42,
+            borderRadius: 10,
+            border: `1px solid ${T.border}`,
+            background: T.bgAlt,
+            color: T.text,
+            fontSize: 13,
+            padding: '0 12px',
+            boxSizing: 'border-box' as const,
+        } as React.CSSProperties,
         // Detail tabs
         detailTab: (active: boolean) => ({
             display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: active ? 800 : 600,
@@ -311,6 +380,22 @@ export function CompanyPanel({ T, isDesktop }: Props) {
         const activeSubs = subs.filter(sub => sub.status === 'active').length;
         const adminCount = members.filter(m => m.role === 'company_admin').length;
         const employeeCount = members.filter(m => m.role === 'employee').length;
+        const editPlanOptions = editingSubscription && editingSubscription.plan && !plans.some(plan => plan.code === editingSubscription.plan?.code)
+            ? [
+                {
+                    id: editingSubscription.plan_id,
+                    code: editingSubscription.plan.code,
+                    family_code: editingSubscription.plan.family_code,
+                    version_number: editingSubscription.plan.version_number,
+                    name: editingSubscription.plan.name,
+                    price: editingSubscription.plan.price,
+                    billing_cycle: editingSubscription.plan.billing_cycle ?? editingSubscription.billing_cycle,
+                    status: editingSubscription.plan.status ?? editingSubscription.status,
+                    product: editingSubscription.product,
+                },
+                ...plans,
+            ]
+            : plans;
 
         return (
             <div style={{ display: 'grid', gap: 14 }}>
@@ -374,6 +459,7 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                         { key: 'overview' as DetailTab, label: 'Overview', icon: Building2 },
                         { key: 'members' as DetailTab, label: `Members (${members.length})`, icon: Users },
                         { key: 'subscriptions' as DetailTab, label: `Subscriptions (${subs.length})`, icon: Package },
+                        { key: 'workspaces' as DetailTab, label: 'Product Workspaces', icon: MapPin },
                     ].map(tab => (
                         <button key={tab.key} onClick={() => setDetailTab(tab.key)} style={s.detailTab(detailTab === tab.key)}>
                             <tab.icon size={13} /> {tab.label}
@@ -626,10 +712,14 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                                                     if (!memberEmail.trim() || !selected) return;
                                                     setAddingMember(true); setAddMemberError('');
                                                     try {
-                                                        await platformApi.addCompanyMember(selected.id, {
+                                                        const response = await platformApi.addCompanyMember(selected.id, {
                                                             email: memberEmail, name: memberName || undefined, role: memberRole,
                                                         });
+                                                        const credentials = response.data?.data?.credentials;
                                                         setShowAddMemberModal(false);
+                                                        if (credentials?.email && credentials?.temporary_password) {
+                                                            setMemberCredentials(credentials);
+                                                        }
                                                         setFeedback({ kind: 'success', msg: 'Member berhasil ditambahkan!' });
                                                         loadMembers(selected.id);
                                                     } catch (err) { setAddMemberError(getErrorMsg(err)); }
@@ -638,6 +728,49 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                                                     style={{ ...s.primaryBtn, height: 38, opacity: (!memberEmail.trim() || addingMember) ? .5 : 1 }}>
                                                     {addingMember ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <UserPlus size={13} />}
                                                     {addingMember ? 'Menambahkan...' : 'Tambah Member'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {memberCredentials && (
+                            <>
+                                <div onClick={() => setMemberCredentials(null)} style={s.overlay} />
+                                <div style={s.modalFrame}>
+                                    <div style={s.modalDialog(440)} onClick={e => e.stopPropagation()}>
+                                        <div style={s.modalHeader}>
+                                            <div>
+                                                <div style={{ fontSize: 15, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif" }}>
+                                                    Kredensial Member Baru
+                                                </div>
+                                                <div style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}>
+                                                    Simpan dan bagikan hanya ke user terkait.
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setMemberCredentials(null)} style={s.modalClose}><X size={14} /></button>
+                                        </div>
+                                        <div style={s.modalBody}>
+                                            <div>
+                                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Email</label>
+                                                <div style={{ width: '100%', minHeight: 44, borderRadius: 11, border: `1px solid ${T.border}`, background: T.bgAlt, padding: '12px 14px', fontSize: 13, color: T.text, boxSizing: 'border-box' }}>
+                                                    {memberCredentials.email}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Password Sementara</label>
+                                                <div style={{ width: '100%', minHeight: 44, borderRadius: 11, border: `1px solid ${T.primary}35`, background: `${T.primary}08`, padding: '12px 14px', fontSize: 13, color: T.text, fontWeight: 800, letterSpacing: '.05em', boxSizing: 'border-box' }}>
+                                                    {memberCredentials.temporary_password}
+                                                </div>
+                                            </div>
+                                            <div style={{ padding: '10px 14px', borderRadius: 12, background: `${T.gold}10`, border: `1px solid ${T.gold}24`, color: T.textSub, fontSize: 12, lineHeight: 1.7 }}>
+                                                Password ini hanya tampil sekali. Minta user login lalu ganti password secepatnya.
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: `1px solid ${T.border}`, paddingTop: 14 }}>
+                                                <button onClick={() => setMemberCredentials(null)} style={{ ...s.primaryBtn, height: 38 }}>
+                                                    Tutup
                                                 </button>
                                             </div>
                                         </div>
@@ -692,11 +825,20 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                                                 {sub.plan?.name ?? sub.product?.name ?? `Plan #${sub.plan_id}`}
                                             </div>
                                             <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
-                                                {sub.billing_cycle} • Start: {formatDate(sub.starts_at)}
+                                                {(sub.plan?.family_code ?? sub.plan?.code ?? sub.billing_cycle)} • v{sub.plan?.version_number ?? 1} • Start: {formatDate(sub.starts_at)}
                                                 {sub.plan?.price != null && ` • ${currencyFmt.format(sub.plan.price)}`}
                                             </div>
                                         </div>
-                                        <span style={s.pill(sub.status === 'active')}>{sub.status}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <span style={s.pill(sub.status === 'active')}>{sub.status}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => openEditSubscriptionModal(sub)}
+                                                style={{ ...s.neutralBtn, height: 34, fontSize: 11, fontWeight: 700, gap: 6, padding: '0 12px' }}
+                                            >
+                                                <PencilLine size={12} /> Ubah
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -760,7 +902,7 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                                                                 <div style={{ flex: 1 }}>
                                                                     <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{plan.name}</div>
                                                                     <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
-                                                                        {plan.product?.name ?? 'Attendance'} • {plan.billing_cycle}
+                                                                        {plan.product?.name ?? 'Attendance'} • {plan.family_code ?? plan.code} • v{plan.version_number ?? 1} • {plan.billing_cycle}
                                                                     </div>
                                                                 </div>
                                                                 <div style={{ fontSize: 14, fontWeight: 900, color: T.primary }}>
@@ -786,7 +928,104 @@ export function CompanyPanel({ T, isDesktop }: Props) {
                                 </div>
                             </>
                         )}
+
+                        {editingSubscription && (
+                            <>
+                                <div onClick={() => setEditingSubscription(null)} style={s.overlay} />
+                                <div style={s.modalFrame}>
+                                    <div style={s.modalDialog(560)} onClick={e => e.stopPropagation()}>
+                                        <div style={s.modalHeader}>
+                                            <div>
+                                                <div style={{ fontSize: 15, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif" }}>
+                                                    Edit Subscription
+                                                </div>
+                                                <div style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}>
+                                                    Perubahan plan dan billing cycle akan diterapkan realtime untuk {selected?.name}
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setEditingSubscription(null)} style={s.modalClose}><X size={14} /></button>
+                                        </div>
+                                        <div style={s.modalBody}>
+                                            {editSubError && (
+                                                <div style={{ padding: '10px 14px', borderRadius: 12, background: `${T.danger}12`, border: `1px solid ${T.danger}30`, color: T.danger, fontSize: 12, fontWeight: 600 }}>
+                                                    {editSubError}
+                                                </div>
+                                            )}
+
+                                            <div style={{ padding: '12px 14px', borderRadius: 14, background: `${T.primary}08`, border: `1px solid ${T.primary}18`, color: T.textSub, fontSize: 12, lineHeight: 1.6 }}>
+                                                Gunakan editor ini untuk memindahkan company ke plan lain, mengubah billing cycle, atau mengganti status subscription
+                                                tanpa keluar dari workspace company.
+                                            </div>
+
+                                            <div style={{ display: 'grid', gap: 8 }}>
+                                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub }}>Plan</label>
+                                                <select
+                                                    value={editSubscriptionPlanCode}
+                                                    onChange={event => setEditSubscriptionPlanCode(event.target.value)}
+                                                    style={s.input}
+                                                >
+                                                    <option value="">Pilih plan</option>
+                                                    {editPlanOptions.map(plan => (
+                                                        <option key={plan.id} value={plan.code}>
+                                                            {plan.name} • {plan.family_code ?? plan.code} • v{plan.version_number ?? 1} • {plan.billing_cycle}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(2, minmax(0, 1fr))' : '1fr', gap: 12 }}>
+                                                <div style={{ display: 'grid', gap: 8 }}>
+                                                    <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub }}>Start Date</label>
+                                                    <input
+                                                        type="date"
+                                                        value={editSubscriptionStartsAt}
+                                                        onChange={event => setEditSubscriptionStartsAt(event.target.value)}
+                                                        style={s.input}
+                                                    />
+                                                </div>
+                                                <div style={{ display: 'grid', gap: 8 }}>
+                                                    <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub }}>Status</label>
+                                                    <select
+                                                        value={editSubscriptionStatus}
+                                                        onChange={event => setEditSubscriptionStatus(event.target.value as typeof editSubscriptionStatus)}
+                                                        style={s.input}
+                                                    >
+                                                        <option value="active">Active</option>
+                                                        <option value="trial">Trial</option>
+                                                        <option value="suspended">Suspended</option>
+                                                        <option value="expired">Expired</option>
+                                                        <option value="cancelled">Cancelled</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: `1px solid ${T.border}`, paddingTop: 14 }}>
+                                                <button onClick={() => setEditingSubscription(null)} style={{ height: 38, borderRadius: 11, border: `1px solid ${T.border}`, background: T.bgAlt, color: T.textSub, fontSize: 12, fontWeight: 700, padding: '0 14px' }}>
+                                                    Batal
+                                                </button>
+                                                <button onClick={handleUpdateSubscription} disabled={!editSubscriptionPlanCode || updatingSubscription}
+                                                    style={{ ...s.primaryBtn, height: 38, opacity: (!editSubscriptionPlanCode || updatingSubscription) ? .5 : 1 }}>
+                                                    {updatingSubscription ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <PencilLine size={13} />}
+                                                    {updatingSubscription ? 'Menyimpan...' : 'Simpan Perubahan'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
+                )}
+
+                {detailTab === 'workspaces' && (
+                    <AdminCompanyProductWorkspace
+                        T={T}
+                        isDesktop={isDesktop}
+                        companyId={selected.id}
+                        companyName={selected.name}
+                        subscriptions={subs}
+                        onGoToSubscriptions={() => setDetailTab('subscriptions')}
+                    />
                 )}
             </div>
         );

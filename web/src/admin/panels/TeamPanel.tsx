@@ -54,6 +54,7 @@ export function TeamPanel({ T, isDesktop }: Props) {
     const [invRole, setInvRole] = useState('platform_staff');
     const [invLoading, setInvLoading] = useState(false);
     const [invError, setInvError] = useState('');
+    const [inviteCredentials, setInviteCredentials] = useState<{ email: string; temporary_password: string } | null>(null);
 
     // Action menu
     const [activeMenu, setActiveMenu] = useState<number | null>(null);
@@ -91,8 +92,12 @@ export function TeamPanel({ T, isDesktop }: Props) {
         setInvLoading(true);
         setInvError('');
         try {
-            await platformApi.inviteTeamMember({ name: invName, email: invEmail, platform_role: invRole });
+            const response = await platformApi.inviteTeamMember({ name: invName, email: invEmail, platform_role: invRole });
+            const credentials = response.data?.data?.credentials;
             setShowInvite(false); setInvName(''); setInvEmail(''); setInvRole('platform_staff');
+            if (credentials?.email && credentials?.temporary_password) {
+                setInviteCredentials(credentials);
+            }
             loadTeam();
         } catch (e: any) {
             setInvError(e.response?.data?.message || 'Gagal invite member.');
@@ -441,6 +446,39 @@ export function TeamPanel({ T, isDesktop }: Props) {
                                         {editLoading ? 'Saving...' : 'Simpan'}
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {inviteCredentials && (
+                <div style={s.modal} onClick={() => setInviteCredentials(null)}>
+                    <div style={s.modalBox} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <h3 style={{ fontSize: 16, fontWeight: 900, color: T.text }}>Kredensial Team Member</h3>
+                            <button onClick={() => setInviteCredentials(null)} style={{ color: T.textMuted }}><X size={18} /></button>
+                        </div>
+
+                        <div style={{ display: 'grid', gap: 14 }}>
+                            <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, display: 'block', marginBottom: 6 }}>EMAIL</label>
+                                <div style={{ ...s.input, display: 'flex', alignItems: 'center' }}>{inviteCredentials.email}</div>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textMuted, display: 'block', marginBottom: 6 }}>PASSWORD SEMENTARA</label>
+                                <div style={{ ...s.input, display: 'flex', alignItems: 'center', fontWeight: 800, letterSpacing: '.05em' }}>{inviteCredentials.temporary_password}</div>
+                            </div>
+                            <div style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.7, padding: '10px 12px', borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgAlt }}>
+                                Password ini hanya tampil sekali. Bagikan ke staff yang diundang lalu minta mereka menggantinya segera.
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                <button onClick={() => setInviteCredentials(null)} style={{
+                                    height: 40, padding: '0 18px', borderRadius: 10, background: T.primary,
+                                    color: '#fff', fontSize: 12, fontWeight: 700,
+                                }}>
+                                    Tutup
+                                </button>
                             </div>
                         </div>
                     </div>

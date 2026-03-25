@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use App\Modules\Platform\Company\Company;
+use App\Modules\Platform\Subscription\SubscriptionService;
 use App\Modules\Platform\Identity\TokenService;
 use App\Support\ApiResponse;
 
@@ -35,11 +37,37 @@ class JwtAuth
             return ApiResponse::unauthenticated('Invalid token');
         }
 
+        $role = $claims->role;
+        $companyId = $claims->current_company_id;
+        $activeProducts = $claims->active_products ?? [];
+        $contextCompanyHeader = $request->header('X-Company-Context');
+        $isInternalTeam = in_array($role, ['super_admin', 'platform_staff', 'platform_finance'], true);
+
+        if ($contextCompanyHeader !== null && $contextCompanyHeader !== '') {
+            if (! $isInternalTeam) {
+                return ApiResponse::forbidden('Company context override is not allowed for this account');
+            }
+
+            if (! ctype_digit((string) $contextCompanyHeader)) {
+                return ApiResponse::badRequest('Invalid company context');
+            }
+
+            $scopedCompany = Company::active()->find((int) $contextCompanyHeader);
+
+            if (! $scopedCompany) {
+                return ApiResponse::notFound('Company context not found');
+            }
+
+            $companyId = $scopedCompany->id;
+            $activeProducts = SubscriptionService::resolveActiveProductCodes($companyId);
+            $request->attributes->set('auth_company_context_override', true);
+        }
+
         // Set claims on request for controllers/services
         $request->attributes->set('auth_user_id', $claims->sub);
-        $request->attributes->set('auth_company_id', $claims->current_company_id);
-        $request->attributes->set('auth_role', $claims->role);
-        $request->attributes->set('auth_active_products', $claims->active_products ?? []);
+        $request->attributes->set('auth_company_id', $companyId);
+        $request->attributes->set('auth_role', $role);
+        $request->attributes->set('auth_active_products', $activeProducts);
         $request->attributes->set('auth_session_id', $claims->session_id);
 
         return $next($request);

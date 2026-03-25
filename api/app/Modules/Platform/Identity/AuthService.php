@@ -152,8 +152,92 @@ class AuthService
                 'code' => $company->code,
                 'name' => $company->name,
                 'status' => $company->status,
+                'logo_url' => $company->logo_url,
             ] : null,
         ];
+    }
+
+    /**
+     * Update current user profile.
+     */
+    public static function updateCurrentUserProfile(
+        int $userId,
+        array $data,
+        ?int $companyId = null,
+    ): array {
+        $user = User::active()->find($userId);
+
+        if (! $user) {
+            throw new \RuntimeException('User tidak ditemukan atau tidak aktif.');
+        }
+
+        $nextEmail = strtolower(trim($data['email'] ?? ''));
+
+        if ($nextEmail === '') {
+            throw new \RuntimeException('Email wajib diisi.');
+        }
+
+        $emailExists = User::query()
+            ->where('email', $nextEmail)
+            ->where('id', '!=', $userId)
+            ->exists();
+
+        if ($emailExists) {
+            throw new \RuntimeException('Email tersebut sudah digunakan akun lain.');
+        }
+
+        $user->update([
+            'name' => trim((string) ($data['name'] ?? $user->name)),
+            'email' => $nextEmail,
+        ]);
+
+        AuditService::platform('auth.profile_updated', [
+            'updated_fields' => ['name', 'email'],
+        ], $companyId);
+
+        return self::getCurrentUserProfile($userId, $companyId ?? 0) ?? [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->platform_role,
+                'current_company_id' => $companyId,
+                'active_products' => [],
+            ],
+            'company' => null,
+        ];
+    }
+
+    /**
+     * Change current user password.
+     */
+    public static function changeCurrentUserPassword(
+        int $userId,
+        string $currentPassword,
+        string $newPassword,
+        ?int $companyId = null,
+    ): void {
+        $user = User::active()->find($userId);
+
+        if (! $user) {
+            throw new \RuntimeException('User tidak ditemukan atau tidak aktif.');
+        }
+
+        if (! Hash::check($currentPassword, $user->password)) {
+            throw new \RuntimeException('Password saat ini tidak sesuai.');
+        }
+
+        if (Hash::check($newPassword, $user->password)) {
+            throw new \RuntimeException('Password baru harus berbeda dari password saat ini.');
+        }
+
+        $user->update([
+            'password' => $newPassword,
+        ]);
+
+        AuditService::platform('auth.password_updated', [
+            'updated_fields' => ['password'],
+        ], $companyId);
     }
 
     // ── Private Helpers ──
@@ -205,6 +289,7 @@ class AuthService
                     'code' => $company->code,
                     'name' => $company->name,
                     'status' => $company->status,
+                    'logo_url' => $company->logo_url,
                 ] : null,
             ],
         ];

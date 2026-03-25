@@ -9,11 +9,31 @@ class Product extends Model
 {
     protected $connection = 'platform';
 
-    protected $fillable = ['code', 'name', 'status', 'app_url'];
+    protected $fillable = [
+        'code',
+        'workspace_key',
+        'name',
+        'description',
+        'status',
+        'app_url',
+        'metadata_json',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'metadata_json' => 'array',
+        ];
+    }
 
     public function plans(): HasMany
     {
         return $this->hasMany(Plan::class);
+    }
+
+    public function latestPlans(): HasMany
+    {
+        return $this->hasMany(Plan::class)->latestVersion();
     }
 
     public function scopeActive($query)

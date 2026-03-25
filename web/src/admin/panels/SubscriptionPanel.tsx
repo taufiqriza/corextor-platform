@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
     Activity, Building2, CheckCircle2, Clock, CreditCard,
-    Loader2, Package, RefreshCcw, TrendingUp, Users,
+    Loader2, Package, PencilLine, RefreshCcw, TrendingUp, Users, X,
 } from 'lucide-react';
 import type { Theme } from '@/theme/tokens';
 import { platformApi } from '@/api/platform.api';
@@ -13,8 +13,13 @@ interface PlanInfo {
     id: number;
     name: string;
     code: string;
+    family_code?: string;
+    version_number?: number;
     price: number;
     billing_cycle: string;
+    status?: string;
+    effective_from?: string | null;
+    version_notes?: string | null;
 }
 
 interface ProductOverview {
@@ -22,12 +27,17 @@ interface ProductOverview {
     name: string;
     code: string;
     description: string | null;
+    workspace_key?: string | null;
+    app_url?: string | null;
+    metadata_json?: Record<string, unknown> | null;
     status: string;
     plans: PlanInfo[];
     stats: {
         total_subscribers: number;
         active_subscribers: number;
         total_revenue: number;
+        plan_families?: number;
+        plan_versions?: number;
     };
 }
 
@@ -35,9 +45,16 @@ interface ProductOverview {
 const currencyFmt = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
 
 /* ═══════════════════ Component ═══════════════════ */
-export function SubscriptionPanel({ T, isDesktop }: Props) {
+export function SubscriptionPanel({ T, isDesktop, isSuperAdmin }: Props) {
     const [products, setProducts] = useState<ProductOverview[]>([]);
     const [loading, setLoading] = useState(true);
+    const [editingPlan, setEditingPlan] = useState<PlanInfo | null>(null);
+    const [editPlanName, setEditPlanName] = useState('');
+    const [editPlanPrice, setEditPlanPrice] = useState('');
+    const [editPlanBillingCycle, setEditPlanBillingCycle] = useState('monthly');
+    const [editPlanStatus, setEditPlanStatus] = useState('active');
+    const [savingPlan, setSavingPlan] = useState(false);
+    const [planError, setPlanError] = useState('');
 
     const loadProducts = async () => {
         setLoading(true);
@@ -49,6 +66,35 @@ export function SubscriptionPanel({ T, isDesktop }: Props) {
     };
 
     useEffect(() => { loadProducts(); }, []);
+
+    const openEditPlan = (plan: PlanInfo) => {
+        setEditingPlan(plan);
+        setEditPlanName(plan.name);
+        setEditPlanPrice(String(plan.price));
+        setEditPlanBillingCycle(plan.billing_cycle);
+        setEditPlanStatus(plan.status ?? 'active');
+        setPlanError('');
+    };
+
+    const handleUpdatePlan = async () => {
+        if (!editingPlan) return;
+        setSavingPlan(true);
+        setPlanError('');
+        try {
+            await platformApi.updatePlan(editingPlan.id, {
+                name: editPlanName.trim(),
+                price: Number(editPlanPrice),
+                billing_cycle: editPlanBillingCycle,
+                status: editPlanStatus,
+            });
+            setEditingPlan(null);
+            await loadProducts();
+        } catch (err: any) {
+            setPlanError(err?.response?.data?.message ?? 'Gagal memperbarui plan.');
+        } finally {
+            setSavingPlan(false);
+        }
+    };
 
     /* ═══ Aggregate stats ═══ */
     const totalSubs = products.reduce((n, p) => n + p.stats.total_subscribers, 0);
@@ -83,6 +129,71 @@ export function SubscriptionPanel({ T, isDesktop }: Props) {
             background: active ? `${T.success}16` : `${T.danger}12`,
             color: active ? T.success : T.danger,
         } as React.CSSProperties),
+        overlay: {
+            position: 'fixed' as const,
+            inset: 0,
+            zIndex: 140,
+            background: 'rgba(2,10,7,.56)',
+            backdropFilter: 'blur(4px)',
+        } as React.CSSProperties,
+        modalFrame: {
+            position: 'fixed' as const,
+            inset: 0,
+            zIndex: 141,
+            display: 'flex',
+            alignItems: isDesktop ? 'center' : 'stretch',
+            justifyContent: 'center',
+            padding: isDesktop ? 16 : 0,
+        } as React.CSSProperties,
+        modalDialog: {
+            width: '100%',
+            maxWidth: 520,
+            maxHeight: isDesktop ? '92vh' : '100vh',
+            background: T.card,
+            border: `1px solid ${T.border}`,
+            borderRadius: isDesktop ? 18 : 0,
+            boxShadow: T.shadow,
+            display: 'flex',
+            flexDirection: 'column' as const,
+            overflow: 'hidden',
+        } as React.CSSProperties,
+        modalHeader: {
+            padding: isDesktop ? '14px 18px' : '12px 14px',
+            borderBottom: `1px solid ${T.border}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 10,
+        } as React.CSSProperties,
+        modalBody: {
+            padding: isDesktop ? 18 : 14,
+            overflowY: 'auto' as const,
+            flex: 1,
+            display: 'grid',
+            gap: 14,
+        } as React.CSSProperties,
+        modalClose: {
+            width: 32,
+            height: 32,
+            borderRadius: 9,
+            border: `1px solid ${T.border}`,
+            background: T.bgAlt,
+            color: T.textSub,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+        } as React.CSSProperties,
+        input: {
+            width: '100%',
+            height: 42,
+            borderRadius: 10,
+            border: `1px solid ${T.border}`,
+            background: T.bgAlt,
+            color: T.text,
+            fontSize: 13,
+            padding: '0 12px',
+            boxSizing: 'border-box' as const,
+        } as React.CSSProperties,
     };
 
     if (loading) {
@@ -164,12 +275,12 @@ export function SubscriptionPanel({ T, isDesktop }: Props) {
                                                 <div style={{ fontSize: 16, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif" }}>
                                                     {product.name}
                                                 </div>
-                                                <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
-                                                    {product.code.toUpperCase()} • {product.plans.length} plan
-                                                </div>
-                                            </div>
+                                        <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>
+                                            {product.code.toUpperCase()} • {product.plans.length} plan aktif • {product.stats.plan_versions ?? product.plans.length} versi
                                         </div>
-                                        <span style={s.pill(product.status === 'active')}>
+                                    </div>
+                                </div>
+                                <span style={s.pill(product.status === 'active')}>
                                             {product.status}
                                         </span>
                                     </div>
@@ -199,8 +310,45 @@ export function SubscriptionPanel({ T, isDesktop }: Props) {
 
                                 {/* Plans */}
                                 <div style={{ padding: '0 14px 14px' }}>
-                                    <div style={{ fontSize: 11, fontWeight: 800, color: T.textSub, marginBottom: 8, textTransform: 'uppercase', letterSpacing: .5 }}>
-                                        Available Plans
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        gap: 10,
+                                        marginBottom: 10,
+                                        flexWrap: 'wrap',
+                                    }}>
+                                        <div style={{ fontSize: 11, fontWeight: 800, color: T.textSub, textTransform: 'uppercase', letterSpacing: .5 }}>
+                                            Available Plans
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                            {product.workspace_key && (
+                                                <span style={{
+                                                    fontSize: 10,
+                                                    fontWeight: 800,
+                                                    padding: '4px 8px',
+                                                    borderRadius: 999,
+                                                    background: `${T.info}12`,
+                                                    color: T.info,
+                                                    border: `1px solid ${T.info}22`,
+                                                }}>
+                                                    workspace: {product.workspace_key}
+                                                </span>
+                                            )}
+                                            {product.stats.plan_families ? (
+                                                <span style={{
+                                                    fontSize: 10,
+                                                    fontWeight: 800,
+                                                    padding: '4px 8px',
+                                                    borderRadius: 999,
+                                                    background: `${T.primary}12`,
+                                                    color: T.primary,
+                                                    border: `1px solid ${T.primary}22`,
+                                                }}>
+                                                    {product.stats.plan_families} family
+                                                </span>
+                                            ) : null}
+                                        </div>
                                     </div>
                                     <div style={{ display: 'grid', gap: 6 }}>
                                         {product.plans.map(plan => (
@@ -218,22 +366,138 @@ export function SubscriptionPanel({ T, isDesktop }: Props) {
                                                         <Clock size={13} />
                                                     </div>
                                                     <div>
-                                                        <div style={{ fontSize: 12, fontWeight: 800, color: T.text }}>{plan.name}</div>
-                                                        <div style={{ fontSize: 10, color: T.textMuted }}>{plan.billing_cycle}</div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                            <div style={{ fontSize: 12, fontWeight: 800, color: T.text }}>{plan.name}</div>
+                                                            <span style={{
+                                                                fontSize: 9,
+                                                                fontWeight: 800,
+                                                                padding: '2px 6px',
+                                                                borderRadius: 999,
+                                                                background: `${T.primary}12`,
+                                                                color: T.primary,
+                                                            }}>
+                                                                v{plan.version_number ?? 1}
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ fontSize: 10, color: T.textMuted }}>
+                                                            {plan.family_code ?? plan.code} • {plan.billing_cycle}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div style={{ fontSize: 13, fontWeight: 900, color: T.primary }}>
-                                                    {currencyFmt.format(plan.price)}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <div style={{ fontSize: 13, fontWeight: 900, color: T.primary }}>
+                                                        {currencyFmt.format(plan.price)}
+                                                    </div>
+                                                    {isSuperAdmin && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openEditPlan(plan)}
+                                                            style={{
+                                                                width: 30,
+                                                                height: 30,
+                                                                borderRadius: 9,
+                                                                border: `1px solid ${T.border}`,
+                                                                background: T.bgAlt,
+                                                                color: T.textSub,
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                            }}
+                                                            title="Edit plan"
+                                                        >
+                                                            <PencilLine size={12} />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
+                                </div>
+
+                                <div style={{
+                                    marginTop: 10,
+                                    padding: '10px 12px',
+                                    borderRadius: 12,
+                                    background: `${T.primary}08`,
+                                    border: `1px solid ${T.primary}18`,
+                                    fontSize: 11,
+                                    color: T.textSub,
+                                    lineHeight: 1.6,
+                                }}>
+                                    Edit plan di catalog sekarang membuat <strong style={{ color: T.text }}>versi baru</strong>, jadi subscription lama tetap
+                                    menyimpan referensi plan historisnya.
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
             </section>
+
+            {editingPlan && (
+                <>
+                    <div onClick={() => setEditingPlan(null)} style={s.overlay} />
+                    <div style={s.modalFrame}>
+                        <div style={s.modalDialog} onClick={e => e.stopPropagation()}>
+                            <div style={s.modalHeader}>
+                                <div>
+                                    <div style={{ fontSize: 15, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif" }}>
+                                        Edit Plan Catalog
+                                    </div>
+                                    <div style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}>
+                                        Simpan perubahan akan membuat versi plan baru. Versi lama tetap dipakai subscription historis.
+                                    </div>
+                                </div>
+                                <button onClick={() => setEditingPlan(null)} style={s.modalClose}><X size={14} /></button>
+                            </div>
+                            <div style={s.modalBody}>
+                                {planError && (
+                                    <div style={{ padding: '10px 14px', borderRadius: 12, background: `${T.danger}12`, border: `1px solid ${T.danger}30`, color: T.danger, fontSize: 12, fontWeight: 600 }}>
+                                        {planError}
+                                    </div>
+                                )}
+
+                                <div style={{ display: 'grid', gap: 8 }}>
+                                    <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub }}>Nama Plan</label>
+                                    <input value={editPlanName} onChange={e => setEditPlanName(e.target.value)} style={s.input} />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: isDesktop ? 'repeat(3, minmax(0, 1fr))' : '1fr', gap: 12 }}>
+                                    <div style={{ display: 'grid', gap: 8 }}>
+                                        <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub }}>Harga</label>
+                                        <input type="number" min="0" value={editPlanPrice} onChange={e => setEditPlanPrice(e.target.value)} style={s.input} />
+                                    </div>
+                                    <div style={{ display: 'grid', gap: 8 }}>
+                                        <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub }}>Billing</label>
+                                        <select value={editPlanBillingCycle} onChange={e => setEditPlanBillingCycle(e.target.value)} style={s.input}>
+                                            <option value="monthly">Monthly</option>
+                                            <option value="yearly">Yearly</option>
+                                            <option value="lifetime">Lifetime</option>
+                                        </select>
+                                    </div>
+                                    <div style={{ display: 'grid', gap: 8 }}>
+                                        <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub }}>Status</label>
+                                        <select value={editPlanStatus} onChange={e => setEditPlanStatus(e.target.value)} style={s.input}>
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: `1px solid ${T.border}`, paddingTop: 14 }}>
+                                    <button onClick={() => setEditingPlan(null)} style={{ height: 38, borderRadius: 11, border: `1px solid ${T.border}`, background: T.bgAlt, color: T.textSub, fontSize: 12, fontWeight: 700, padding: '0 14px' }}>
+                                        Batal
+                                    </button>
+                                    <button onClick={handleUpdatePlan} disabled={savingPlan}
+                                        style={{ ...s.neutralBtn, height: 38, border: 'none', background: `linear-gradient(135deg, ${T.primary}, ${T.primaryDark})`, color: '#fff', padding: '0 14px', fontSize: 12, fontWeight: 800, opacity: savingPlan ? .6 : 1 }}>
+                                        {savingPlan ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <PencilLine size={13} />}
+                                        {savingPlan ? 'Menyimpan...' : 'Simpan Plan'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }

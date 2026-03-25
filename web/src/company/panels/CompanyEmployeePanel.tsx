@@ -6,9 +6,13 @@ import {
 import type { Theme } from '@/theme/tokens';
 import { attendanceApi } from '@/api/platform.api';
 
-interface Props { T: Theme; isDesktop: boolean; }
+interface Props {
+    T: Theme;
+    isDesktop: boolean;
+    companyContextId?: number;
+}
 
-export function CompanyEmployeePanel({ T, isDesktop }: Props) {
+export function CompanyEmployeePanel({ T, isDesktop, companyContextId }: Props) {
     const [users, setUsers] = useState<any[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -17,7 +21,8 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
 
     // Add Modal
     const [showAdd, setShowAdd] = useState(false);
-    const [addPlatformUserId, setAddPlatformUserId] = useState('');
+    const [addName, setAddName] = useState('');
+    const [addEmail, setAddEmail] = useState('');
     const [addBranch, setAddBranch] = useState('');
     const [addPin, setAddPin] = useState('');
     const [adding, setAdding] = useState(false);
@@ -33,36 +38,48 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
     const [pinMsg, setPinMsg] = useState('');
 
     const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; msg: string } | null>(null);
+    const [createdCredentials, setCreatedCredentials] = useState<{ email: string; temporary_password: string } | null>(null);
     useEffect(() => { if (feedback) { const t = setTimeout(() => setFeedback(null), 3000); return () => clearTimeout(t); } }, [feedback]);
 
     const load = async () => {
         setLoading(true);
         try {
-            const [u, b] = await Promise.all([attendanceApi.getUsers(), attendanceApi.getBranches()]);
+            const [u, b] = await Promise.all([attendanceApi.getUsers(companyContextId), attendanceApi.getBranches(companyContextId)]);
             setUsers(u.data?.data ?? []);
             setBranches(b.data?.data ?? []);
         } catch { setUsers([]); }
         finally { setLoading(false); }
     };
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => { load(); }, [companyContextId]);
 
     const filtered = search.trim()
         ? users.filter(u => {
             const q = search.toLowerCase();
             return String(u.platform_user_id).includes(q) ||
                 u.branch?.name?.toLowerCase().includes(q) ||
-                u.platform_user?.name?.toLowerCase().includes(q);
+                u.platform_user?.name?.toLowerCase().includes(q) ||
+                u.platform_user?.email?.toLowerCase().includes(q);
         })
         : users;
 
     const handleAdd = async () => {
-        if (!addPlatformUserId || !addBranch || !addPin) return;
+        if (!addEmail || !addBranch || !addPin) return;
         setAdding(true); setAddError('');
         try {
-            await attendanceApi.createUser({ platform_user_id: Number(addPlatformUserId), branch_id: Number(addBranch), pin: addPin });
+            const response = await attendanceApi.createUser({
+                name: addName.trim() || undefined,
+                email: addEmail.trim().toLowerCase(),
+                role: 'employee',
+                branch_id: Number(addBranch),
+                pin: addPin,
+            }, companyContextId);
             setShowAdd(false);
             setFeedback({ kind: 'success', msg: 'Karyawan berhasil ditambahkan!' });
+            const credentials = response.data?.data?.credentials;
+            if (credentials?.email && credentials?.temporary_password) {
+                setCreatedCredentials(credentials);
+            }
             load();
         } catch (err: any) { setAddError(err?.response?.data?.message ?? 'Gagal menambah'); }
         finally { setAdding(false); }
@@ -70,10 +87,10 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
 
     const handleResetPin = async () => {
         if (!resettingPin || !newPin) return;
-        if (newPin.length < 4) { setPinMsg('PIN minimal 4 digit.'); return; }
+        if (!/^[0-9]{6}$/.test(newPin)) { setPinMsg('PIN harus terdiri dari 6 digit angka.'); return; }
         setPinSaving(true); setPinMsg('');
         try {
-            await attendanceApi.resetPin(resettingPin.id, newPin);
+            await attendanceApi.resetPin(resettingPin.id, newPin, companyContextId);
             setPinMsg('PIN berhasil direset!');
             setTimeout(() => { setResettingPin(null); setPinMsg(''); setNewPin(''); load(); }, 1200);
         } catch (err: any) {
@@ -129,7 +146,7 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
                         <button onClick={load} style={{ height: 40, width: 40, borderRadius: 11, border: `1px solid ${T.border}`, background: T.bgAlt, color: T.textSub, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <RefreshCcw size={14} />
                         </button>
-                        <button onClick={() => { setShowAdd(true); setAddError(''); setAddPlatformUserId(''); setAddBranch(branches[0]?.id?.toString() ?? ''); setAddPin(''); }}
+                        <button onClick={() => { setShowAdd(true); setAddError(''); setAddName(''); setAddEmail(''); setAddBranch(branches[0]?.id?.toString() ?? ''); setAddPin(''); }}
                             style={s.primaryBtn}>
                             <UserPlus size={14} /> Tambah Karyawan
                         </button>
@@ -200,7 +217,7 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
                                             </button>
                                             <button onClick={async () => {
                                                 if (!confirm('Hapus karyawan ini?')) return;
-                                                try { await attendanceApi.deleteUser(u.id); setFeedback({ kind: 'success', msg: 'Karyawan dihapus.' }); load(); } catch {}
+                                                try { await attendanceApi.deleteUser(u.id, companyContextId); setFeedback({ kind: 'success', msg: 'Karyawan dihapus.' }); load(); } catch {}
                                             }} title="Hapus" style={{
                                                 width: 30, height: 30, borderRadius: 8,
                                                 border: `1px solid ${T.danger}25`, background: `${T.danger}06`,
@@ -241,7 +258,7 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
                                     }}><Key size={10} /> Reset PIN</button>
                                     <button onClick={async () => {
                                         if (!confirm('Hapus karyawan ini?')) return;
-                                        try { await attendanceApi.deleteUser(u.id); setFeedback({ kind: 'success', msg: 'Karyawan dihapus.' }); load(); } catch {}
+                                        try { await attendanceApi.deleteUser(u.id, companyContextId); setFeedback({ kind: 'success', msg: 'Karyawan dihapus.' }); load(); } catch {}
                                     }} style={{
                                         height: 30, padding: '0 10px', borderRadius: 8, border: `1px solid ${T.danger}30`,
                                         background: `${T.danger}08`, color: T.danger, fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4,
@@ -267,9 +284,14 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
                         {addError && <div style={{ padding: '10px 14px', borderRadius: 12, background: `${T.danger}12`, color: T.danger, fontSize: 12, fontWeight: 600, marginBottom: 12 }}>{addError}</div>}
                         <div style={{ display: 'grid', gap: 14 }}>
                             <div>
-                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Platform User ID</label>
-                                <input value={addPlatformUserId} onChange={e => setAddPlatformUserId(e.target.value)} placeholder="ID user dari platform" type="number" style={s.input} />
-                                <div style={{ fontSize: 10, color: T.textMuted, marginTop: 4 }}>ID user yang sudah terdaftar di Corextor Platform.</div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Nama Karyawan</label>
+                                <input value={addName} onChange={e => setAddName(e.target.value)} placeholder="Contoh: Budi Santoso" style={s.input} />
+                                <div style={{ fontSize: 10, color: T.textMuted, marginTop: 4 }}>Opsional jika email sudah pernah terdaftar.</div>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Email Login</label>
+                                <input value={addEmail} onChange={e => setAddEmail(e.target.value)} placeholder="karyawan@company.com" type="email" style={s.input} />
+                                <div style={{ fontSize: 10, color: T.textMuted, marginTop: 4 }}>Jika email belum ada, akun employee akan dibuat otomatis.</div>
                             </div>
                             <div>
                                 <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>Cabang</label>
@@ -279,12 +301,12 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
                                 </select>
                             </div>
                             <div>
-                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>PIN (6 digit)</label>
-                                <input value={addPin} onChange={e => setAddPin(e.target.value)} placeholder="123456" maxLength={6} type="password" style={s.input} />
+                                <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>PIN 6 digit</label>
+                                <input value={addPin} onChange={e => setAddPin(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="123456" maxLength={6} type="password" style={s.input} />
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, borderTop: `1px solid ${T.border}`, paddingTop: 14 }}>
                                 <button onClick={() => setShowAdd(false)} style={{ height: 40, padding: '0 16px', borderRadius: 11, border: `1px solid ${T.border}`, background: T.bgAlt, color: T.textSub, fontSize: 12, fontWeight: 700 }}>Batal</button>
-                                <button onClick={handleAdd} disabled={!addPlatformUserId || !addBranch || !addPin || adding} style={{ ...s.primaryBtn, opacity: adding ? .5 : 1 }}>
+                                <button onClick={handleAdd} disabled={!addEmail || !addBranch || !addPin || adding} style={{ ...s.primaryBtn, opacity: adding ? .5 : 1 }}>
                                     {adding ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <UserPlus size={14} />}
                                     {adding ? 'Menambahkan...' : 'Tambah'}
                                 </button>
@@ -307,7 +329,7 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
                         </div>
                         <div style={{ marginBottom: 16 }}>
                             <label style={{ fontSize: 11, fontWeight: 700, color: T.textSub, display: 'block', marginBottom: 6 }}>PIN Baru (6 digit)</label>
-                            <input value={newPin} onChange={e => setNewPin(e.target.value)} placeholder="123456" maxLength={6} type="password" style={s.input} />
+                            <input value={newPin} onChange={e => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="123456" maxLength={6} type="password" style={s.input} />
                         </div>
                         {pinMsg && <div style={{ padding: '8px 12px', borderRadius: 10, marginBottom: 12, fontSize: 12, fontWeight: 600, background: pinMsg.includes('berhasil') ? `${T.success}12` : `${T.danger}12`, color: pinMsg.includes('berhasil') ? T.success : T.danger }}>{pinMsg}</div>}
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -315,6 +337,38 @@ export function CompanyEmployeePanel({ T, isDesktop }: Props) {
                             <button onClick={handleResetPin} disabled={!newPin || pinSaving} style={{ ...s.primaryBtn, opacity: pinSaving ? .5 : 1 }}>
                                 {pinSaving ? 'Menyimpan...' : '✓ Reset PIN'}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {createdCredentials && (
+                <div style={s.modal} onClick={() => setCreatedCredentials(null)}>
+                    <div style={s.modalBox} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                            <div>
+                                <h3 style={{ fontSize: 16, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif" }}>Kredensial akun baru</h3>
+                                <p style={{ fontSize: 11, color: T.textMuted, marginTop: 3 }}>Tampilkan sekali lalu simpan secara aman.</p>
+                            </div>
+                            <button onClick={() => setCreatedCredentials(null)} style={{ color: T.textMuted }}><X size={18} /></button>
+                        </div>
+                        <div style={{ display: 'grid', gap: 12 }}>
+                            <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: T.textSub, marginBottom: 6 }}>Email Login</div>
+                                <div style={{ ...s.input, display: 'flex', alignItems: 'center', fontWeight: 700 }}>{createdCredentials.email}</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: T.textSub, marginBottom: 6 }}>Password Sementara</div>
+                                <div style={{ ...s.input, display: 'flex', alignItems: 'center', fontWeight: 800, letterSpacing: '.04em' }}>{createdCredentials.temporary_password}</div>
+                            </div>
+                            <div style={{ padding: '10px 12px', borderRadius: 12, background: `${T.gold}12`, color: T.text, fontSize: 12, lineHeight: 1.6 }}>
+                                PIN absensi tetap 6 digit. Password ini hanya dipakai untuk login email jika dibutuhkan.
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                <button onClick={() => setCreatedCredentials(null)} style={{ ...s.primaryBtn, height: 40 }}>
+                                    Saya Sudah Simpan
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

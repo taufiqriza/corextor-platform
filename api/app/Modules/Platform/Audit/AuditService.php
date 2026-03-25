@@ -50,6 +50,18 @@ class AuditService
     }
 
     /**
+     * Log a product-level event.
+     */
+    public static function product(
+        string $productCode,
+        string $action,
+        array $details = [],
+        ?int $companyId = null,
+    ): void {
+        static::log($action, $details, $productCode, $companyId);
+    }
+
+    /**
      * Log an attendance-level event.
      */
     public static function attendance(
@@ -57,7 +69,7 @@ class AuditService
         array $details = [],
         ?int $companyId = null,
     ): void {
-        static::log($action, $details, 'attendance', $companyId);
+        static::product('attendance', $action, $details, $companyId);
     }
 
     /**

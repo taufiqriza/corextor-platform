@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AuthUser } from '@/types/auth.types';
+import type { AuthUser, MePayload } from '@/types/auth.types';
 import { platformApi } from '@/api/platform.api';
 
 interface AuthState {
@@ -24,9 +24,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     isLoading: false,
 
     setAuth: (user, token) => {
+        const normalizedUser = normalizeAuthUser(user);
         localStorage.setItem('corextor_token', token);
-        localStorage.setItem('corextor_user', JSON.stringify(user));
-        set({ user, token, isAuthenticated: true });
+        localStorage.setItem('corextor_user', JSON.stringify(normalizedUser));
+        set({ user: normalizedUser, token, isAuthenticated: true });
     },
 
     clearAuth: () => {
@@ -69,7 +70,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const res = await platformApi.me();
             const token = localStorage.getItem('corextor_token');
             if (token) {
-                set({ user: res.data.data, token, isAuthenticated: true });
+                const normalizedUser = normalizeAuthUser(res.data.data);
+                localStorage.setItem('corextor_user', JSON.stringify(normalizedUser));
+                set({ user: normalizedUser, token, isAuthenticated: true });
             }
         } catch {
             get().clearAuth();
@@ -89,3 +92,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     },
 }));
+
+function normalizeAuthUser(payload: AuthUser | MePayload): AuthUser {
+    if ('user' in payload) {
+        return {
+            ...payload.user,
+            company: payload.company ?? payload.user.company ?? undefined,
+        };
+    }
+
+    return {
+        ...payload,
+        company: payload.company ?? undefined,
+    };
+}

@@ -107,4 +107,66 @@ class AuthController extends Controller
 
         return ApiResponse::success(data: $profile);
     }
+
+    /**
+     * PUT /platform/v1/me
+     *
+     * Update current user profile.
+     */
+    public function updateMe(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required|string|min:2|max:120',
+            'email' => 'required|string|email|max:255',
+        ]);
+
+        $userId = (int) $request->attributes->get('auth_user_id');
+        $companyId = $request->attributes->get('auth_company_id');
+
+        try {
+            $profile = AuthService::updateCurrentUserProfile(
+                userId: $userId,
+                data: $request->only('name', 'email'),
+                companyId: $companyId ? (int) $companyId : null,
+            );
+
+            return ApiResponse::success(
+                data: $profile,
+                message: 'Profil berhasil diperbarui',
+            );
+        } catch (\RuntimeException $e) {
+            return ApiResponse::conflict($e->getMessage());
+        }
+    }
+
+    /**
+     * PUT /platform/v1/me/password
+     *
+     * Update current user password.
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'current_password' => 'required|string|min:6|max:120',
+            'new_password' => 'required|string|min:8|max:120|confirmed|different:current_password',
+        ]);
+
+        $userId = (int) $request->attributes->get('auth_user_id');
+        $companyId = $request->attributes->get('auth_company_id');
+
+        try {
+            AuthService::changeCurrentUserPassword(
+                userId: $userId,
+                currentPassword: (string) $request->input('current_password'),
+                newPassword: (string) $request->input('new_password'),
+                companyId: $companyId ? (int) $companyId : null,
+            );
+
+            return ApiResponse::success(
+                message: 'Password berhasil diperbarui',
+            );
+        } catch (\RuntimeException $e) {
+            return ApiResponse::badRequest($e->getMessage());
+        }
+    }
 }

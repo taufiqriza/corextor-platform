@@ -10,7 +10,7 @@ class HealthController extends Controller
     /**
      * Platform health check.
      *
-     * Verifies that both database connections are reachable.
+     * Verifies that core database connections are reachable.
      */
     public function index()
     {
@@ -30,6 +30,14 @@ class HealthController extends Controller
             $checks['attendance_db'] = 'ok';
         } catch (\Throwable $e) {
             $checks['attendance_db'] = 'unreachable';
+        }
+
+        // Check payroll DB
+        try {
+            DB::connection('payroll')->getPdo();
+            $checks['payroll_db'] = 'ok';
+        } catch (\Throwable $e) {
+            $checks['payroll_db'] = 'unreachable';
         }
 
         $allHealthy = ! in_array('unreachable', $checks);

@@ -7,20 +7,52 @@ use App\Modules\Attendance\Services\AttendanceRecordService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttendanceRecordController extends Controller
 {
+    /**
+     * GET /attendance/v1/attendance/context
+     */
+    public function context(Request $request): JsonResponse
+    {
+        $userId = $request->attributes->get('auth_user_id');
+        $companyId = $request->attributes->get('auth_company_id');
+
+        $context = AttendanceRecordService::context($userId, $companyId);
+
+        return ApiResponse::success($context);
+    }
+
     /**
      * POST /attendance/v1/attendance/check-in
      */
     public function checkIn(Request $request): JsonResponse
     {
+        $request->validate([
+            'attendance_mode' => 'required|string|in:office,field',
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'accuracy' => 'nullable|numeric|min:0|max:10000',
+            'selfie' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+        ]);
+
         $userId = $request->attributes->get('auth_user_id');
         $companyId = $request->attributes->get('auth_company_id');
 
         try {
-            $record = AttendanceRecordService::checkIn($userId, $companyId);
-            return ApiResponse::created($record);
+            $record = AttendanceRecordService::checkIn(
+                platformUserId: $userId,
+                companyId: $companyId,
+                attendanceMode: $request->string('attendance_mode')->toString(),
+                latitude: $request->input('latitude'),
+                longitude: $request->input('longitude'),
+                accuracyMeters: $request->input('accuracy'),
+                selfie: $request->file('selfie'),
+            );
+
+            return ApiResponse::created(AttendanceRecordService::transformRecord($record));
         } catch (\RuntimeException $e) {
             return ApiResponse::conflict($e->getMessage());
         }
@@ -31,12 +63,27 @@ class AttendanceRecordController extends Controller
      */
     public function checkOut(Request $request): JsonResponse
     {
+        $request->validate([
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
+            'accuracy' => 'nullable|numeric|min:0|max:10000',
+            'selfie' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+        ]);
+
         $userId = $request->attributes->get('auth_user_id');
         $companyId = $request->attributes->get('auth_company_id');
 
         try {
-            $record = AttendanceRecordService::checkOut($userId, $companyId);
-            return ApiResponse::success($record, 'Checked out successfully');
+            $record = AttendanceRecordService::checkOut(
+                platformUserId: $userId,
+                companyId: $companyId,
+                latitude: $request->input('latitude'),
+                longitude: $request->input('longitude'),
+                accuracyMeters: $request->input('accuracy'),
+                selfie: $request->file('selfie'),
+            );
+
+            return ApiResponse::success(AttendanceRecordService::transformRecord($record), 'Checked out successfully');
         } catch (\RuntimeException $e) {
             return ApiResponse::conflict($e->getMessage());
         }
@@ -50,6 +97,7 @@ class AttendanceRecordController extends Controller
         $request->validate([
             'from' => 'nullable|date',
             'to' => 'nullable|date',
+            'per_page' => 'nullable|integer|min:1|max:100',
         ]);
 
         $userId = $request->attributes->get('auth_user_id');
@@ -60,9 +108,18 @@ class AttendanceRecordController extends Controller
             companyId: $companyId,
             from: $request->query('from'),
             to: $request->query('to'),
+            perPage: (int) ($request->query('per_page', 15)),
         );
 
-        return ApiResponse::success($records);
+        return ApiResponse::success([
+            'current_page' => $records->currentPage(),
+            'data' => $records->getCollection()->map(
+                fn ($record) => AttendanceRecordService::transformRecord($record)
+            )->values(),
+            'per_page' => $records->perPage(),
+            'total' => $records->total(),
+            'last_page' => $records->lastPage(),
+        ]);
     }
 
     /**
@@ -74,6 +131,9 @@ class AttendanceRecordController extends Controller
             'from' => 'nullable|date',
             'to' => 'nullable|date',
             'branch_id' => 'nullable|integer',
+            'attendance_mode' => 'nullable|string|in:office,field',
+            'per_page' => 'nullable|integer|min:1|max:100',
+            'page' => 'nullable|integer|min:1',
         ]);
 
         $companyId = $request->attributes->get('auth_company_id');
@@ -83,34 +143,54 @@ class AttendanceRecordController extends Controller
             from: $request->query('from'),
             to: $request->query('to'),
             branchId: $request->query('branch_id'),
+            attendanceMode: $request->query('attendance_mode'),
+            perPage: (int) $request->query('per_page', 15),
         );
 
         $stats = AttendanceRecordService::companyReportStats(
             companyId: $companyId,
             from: $request->query('from'),
             to: $request->query('to'),
+            branchId: $request->query('branch_id'),
+            attendanceMode: $request->query('attendance_mode'),
         );
 
-        $data = $records->map(fn ($r) => [
-            'id'                 => $r->id,
-            'attendance_user_id' => $r->attendance_user_id,
-            'platform_user_id'   => $r->platform_user_id,
-            'company_id'         => $r->company_id,
-            'branch_id'          => $r->branch_id,
-            'date'               => $r->date?->format('Y-m-d'),
-            'time_in'            => $r->time_in,
-            'time_out'           => $r->time_out,
-            'status'             => $r->status,
-            'note'               => $r->note,
-            'employee_name'      => $r->platformUser?->name ?? 'Unknown',
-            'employee_email'     => $r->platformUser?->email,
-            'branch_name'        => $r->branch?->name,
-        ]);
-
         return ApiResponse::success([
-            'stats'   => $stats,
-            'records' => $data,
+            'stats' => $stats,
+            'pagination' => [
+                'current_page' => $records->currentPage(),
+                'data' => $records->getCollection()->map(
+                    fn ($record) => AttendanceRecordService::transformRecord($record)
+                )->values(),
+                'per_page' => $records->perPage(),
+                'total' => $records->total(),
+                'last_page' => $records->lastPage(),
+            ],
         ]);
+    }
+
+    public function selfie(Request $request, int $id, string $moment): StreamedResponse|JsonResponse
+    {
+        $platformUserId = (int) $request->attributes->get('auth_user_id');
+        $companyId = (int) $request->attributes->get('auth_company_id');
+        $role = (string) $request->attributes->get('auth_role');
+        $companyWideAccess = in_array($role, ['company_admin', 'super_admin', 'platform_staff'], true);
+
+        try {
+            $record = AttendanceRecordService::resolveAccessibleRecord(
+                recordId: $id,
+                companyId: $companyId,
+                platformUserId: $platformUserId,
+                companyWideAccess: $companyWideAccess,
+            );
+            $path = AttendanceRecordService::resolveSelfiePath($record, $moment);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return ApiResponse::notFound('Record absensi tidak ditemukan.');
+        } catch (\RuntimeException $e) {
+            return ApiResponse::notFound($e->getMessage());
+        }
+
+        return Storage::disk(AttendanceRecordService::selfieDisk())->response($path);
     }
 
     /**

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuthStore } from '@/store/authStore';
 import { Delete, Fingerprint, Loader2 } from 'lucide-react';
+import { getHomeRoute } from '@/guards/AuthGuard';
 
 const PIN_LENGTH = 6;
 const KEYPAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
@@ -28,7 +29,10 @@ export function PinLoginPage() {
             await loginWithPin(pinValue);
             setSuccess(true);
             vibrate(50);
-            setTimeout(() => navigate('/employee', { replace: true }), 600);
+            setTimeout(() => {
+                const nextUser = useAuthStore.getState().user;
+                navigate(getHomeRoute(nextUser?.role), { replace: true });
+            }, 600);
         } catch (err: unknown) {
             const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'PIN tidak valid';
             setError(msg);

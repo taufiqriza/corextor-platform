@@ -4,23 +4,15 @@ import {
     Loader2, Pencil, RefreshCcw, Search,
     UserCheck, X,
 } from 'lucide-react';
+import { AttendanceEvidenceSummary } from '@/components/attendance/AttendanceEvidenceSummary';
 import type { Theme } from '@/theme/tokens';
 import { attendanceApi } from '@/api/platform.api';
+import type { AttendanceAdminReportPayload, AttendanceAdminReportItem } from '@/types/attendance.types';
 
 /* ═══════════════════ Types ═══════════════════ */
 interface Props { T: Theme; isDesktop: boolean; }
 
-interface Record {
-    id: number; attendance_user_id: number; platform_user_id: number;
-    company_id: number; branch_id: number; date: string;
-    time_in: string | null; time_out: string | null;
-    status: string; note: string | null;
-    employee_name: string; employee_email?: string; branch_name?: string;
-}
-interface Stats {
-    total: number; present: number; corrected: number;
-    complete: number; ongoing: number;
-}
+const PER_PAGE = 15;
 
 /* ═══════════════════ Helpers ═══════════════════ */
 function formatDate(v?: string): string {
@@ -40,11 +32,11 @@ function statusMeta(status: string, T: Theme) {
 
 /* ═══════════════════ Component ═══════════════════ */
 export function AttendanceReportPanel({ T, isDesktop }: Props) {
-    const [records, setRecords] = useState<Record[]>([]);
-    const [stats, setStats] = useState<Stats>({ total: 0, present: 0, corrected: 0, complete: 0, ongoing: 0 });
+    const [payload, setPayload] = useState<AttendanceAdminReportPayload | null>(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [page, setPage] = useState(1);
 
     // Date range
     const today = new Date().toISOString().split('T')[0];
@@ -53,7 +45,7 @@ export function AttendanceReportPanel({ T, isDesktop }: Props) {
     const [dateTo, setDateTo] = useState(today);
 
     // Correction modal
-    const [correcting, setCorrecting] = useState<Record | null>(null);
+    const [correcting, setCorrecting] = useState<AttendanceAdminReportItem | null>(null);
     const [corrTimeIn, setCorrTimeIn] = useState('');
     const [corrTimeOut, setCorrTimeOut] = useState('');
     const [corrNote, setCorrNote] = useState('');
@@ -63,15 +55,17 @@ export function AttendanceReportPanel({ T, isDesktop }: Props) {
     const loadReport = async () => {
         setLoading(true);
         try {
-            const res = await attendanceApi.getReport({ from: dateFrom, to: dateTo });
-            const data = res.data?.data ?? {};
-            setRecords(data.records ?? data.data ?? []);
-            if (data.stats) setStats(data.stats);
-        } catch { setRecords([]); }
+            const res = await attendanceApi.getReport({ from: dateFrom, to: dateTo, per_page: PER_PAGE, page });
+            setPayload(res.data?.data ?? null);
+        } catch { setPayload(null); }
         finally { setLoading(false); }
     };
 
-    useEffect(() => { loadReport(); }, [dateFrom, dateTo]);
+    useEffect(() => { loadReport(); }, [dateFrom, dateTo, page]);
+
+    const records = payload?.pagination.data ?? [];
+    const stats = payload?.stats ?? { total: 0, present: 0, corrected: 0, complete: 0, ongoing: 0 };
+    const pagination = payload?.pagination ?? { current_page: 1, per_page: PER_PAGE, total: 0, last_page: 1, data: [] };
 
     const filtered = useMemo(() => {
         let list = records;
@@ -92,7 +86,7 @@ export function AttendanceReportPanel({ T, isDesktop }: Props) {
     }, [records, search, statusFilter]);
 
     /* ── Correction ── */
-    const openCorrection = (r: Record) => {
+    const openCorrection = (r: AttendanceAdminReportItem) => {
         setCorrecting(r);
         setCorrTimeIn(r.time_in ?? '');
         setCorrTimeOut(r.time_out ?? '');
@@ -188,9 +182,9 @@ export function AttendanceReportPanel({ T, isDesktop }: Props) {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <Calendar size={14} color={T.textMuted} />
-                        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={s.dateInput} />
+                        <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(1); }} style={s.dateInput} />
                         <span style={{ color: T.textMuted, fontSize: 11 }}>—</span>
-                        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={s.dateInput} />
+                        <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(1); }} style={s.dateInput} />
                     </div>
                     <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
                         style={{ height: 40, borderRadius: 11, border: `1px solid ${T.border}`, background: T.bgAlt, color: T.text, fontSize: 12, padding: '0 10px', minWidth: 120 }}>
@@ -216,9 +210,9 @@ export function AttendanceReportPanel({ T, isDesktop }: Props) {
                 ) : isDesktop ? (
                     /* Desktop Table */
                     <div style={{ marginTop: 12, border: `1px solid ${T.border}`, borderRadius: 14, overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 750 }}>
+                        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 960 }}>
                             <thead><tr style={{ background: T.bgAlt }}>
-                                {['Karyawan', 'Cabang', 'Tanggal', 'Check-in', 'Check-out', 'Status', 'Aksi'].map(h => <th key={h} style={s.th}>{h}</th>)}
+                                {['Karyawan', 'Cabang', 'Tanggal', 'Check-in', 'Check-out', 'Bukti', 'Status', 'Aksi'].map(h => <th key={h} style={s.th}>{h}</th>)}
                             </tr></thead>
                             <tbody>{filtered.map(r => {
                                 const sm = statusMeta(r.status, T);
@@ -234,9 +228,9 @@ export function AttendanceReportPanel({ T, isDesktop }: Props) {
                                                     background: `${T.primary}14`, display: 'flex',
                                                     alignItems: 'center', justifyContent: 'center',
                                                     fontSize: 12, fontWeight: 900, color: T.primary,
-                                                }}>{r.employee_name.charAt(0).toUpperCase()}</div>
+                                                }}>{(r.employee_name ?? 'U').charAt(0).toUpperCase()}</div>
                                                 <div>
-                                                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{r.employee_name}</div>
+                                                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{r.employee_name ?? 'Unknown'}</div>
                                                     {r.employee_email && <div style={{ fontSize: 10, color: T.textMuted }}>{r.employee_email}</div>}
                                                 </div>
                                             </div>
@@ -252,6 +246,15 @@ export function AttendanceReportPanel({ T, isDesktop }: Props) {
                                             <span style={{ fontSize: 13, fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: r.time_out ? T.info : T.textMuted }}>
                                                 {r.time_out ?? '—'}
                                             </span>
+                                        </td>
+                                        <td style={{ ...s.td, minWidth: 240 }}>
+                                            <AttendanceEvidenceSummary
+                                                T={T}
+                                                compact
+                                                attendanceModeIn={r.attendance_mode_in}
+                                                checkInLocation={r.check_in_location}
+                                                checkOutLocation={r.check_out_location}
+                                            />
                                         </td>
                                         <td style={s.td}>
                                             <span style={s.pill(sm.bg, sm.color, sm.border)}>{sm.label}</span>
@@ -287,8 +290,8 @@ export function AttendanceReportPanel({ T, isDesktop }: Props) {
                                                 width: 34, height: 34, borderRadius: 10,
                                                 background: `${T.primary}14`, display: 'flex',
                                                 alignItems: 'center', justifyContent: 'center',
-                                                fontSize: 13, fontWeight: 900, color: T.primary,
-                                            }}>{r.employee_name.charAt(0).toUpperCase()}</div>
+                                                    fontSize: 13, fontWeight: 900, color: T.primary,
+                                                }}>{(r.employee_name ?? 'U').charAt(0).toUpperCase()}</div>
                                             <div>
                                                 <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>{r.employee_name}</div>
                                                 <div style={{ fontSize: 10, color: T.textMuted, marginTop: 2 }}>{r.branch_name ?? '-'} • {formatDate(r.date)}</div>
@@ -316,10 +319,40 @@ export function AttendanceReportPanel({ T, isDesktop }: Props) {
                                             </button>
                                         </div>
                                     </div>
+                                    <div style={{ marginTop: 10 }}>
+                                        <AttendanceEvidenceSummary
+                                            T={T}
+                                            attendanceModeIn={r.attendance_mode_in}
+                                            checkInLocation={r.check_in_location}
+                                            checkOutLocation={r.check_out_location}
+                                        />
+                                    </div>
                                     {r.note && <div style={{ marginTop: 8, fontSize: 11, color: T.textMuted, fontStyle: 'italic' }}>📝 {r.note}</div>}
                                 </div>
                             );
                         })}
+                    </div>
+                )}
+
+                {pagination.last_page > 1 && (
+                    <div style={{ marginTop: 12, borderRadius: 14, border: `1px solid ${T.border}`, background: T.bgAlt, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                        <button
+                            onClick={() => setPage(current => Math.max(1, current - 1))}
+                            disabled={pagination.current_page <= 1}
+                            style={pagerButtonStyle(T, pagination.current_page <= 1)}
+                        >
+                            Prev
+                        </button>
+                        <div style={{ fontSize: 11.5, color: T.textMuted, fontWeight: 700 }}>
+                            Halaman {pagination.current_page} dari {pagination.last_page}
+                        </div>
+                        <button
+                            onClick={() => setPage(current => Math.min(pagination.last_page, current + 1))}
+                            disabled={pagination.current_page >= pagination.last_page}
+                            style={pagerButtonStyle(T, pagination.current_page >= pagination.last_page)}
+                        >
+                            Next
+                        </button>
                     </div>
                 )}
             </section>
@@ -397,4 +430,21 @@ export function AttendanceReportPanel({ T, isDesktop }: Props) {
             <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         </div>
     );
+}
+
+function pagerButtonStyle(T: Theme, disabled: boolean): React.CSSProperties {
+    return {
+        height: 38,
+        padding: '0 12px',
+        borderRadius: 12,
+        border: `1px solid ${T.border}`,
+        background: T.card,
+        color: disabled ? T.textMuted : T.text,
+        fontSize: 11.5,
+        fontWeight: 800,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: disabled ? .55 : 1,
+    };
 }

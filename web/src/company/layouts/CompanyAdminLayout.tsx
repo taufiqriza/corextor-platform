@@ -14,6 +14,9 @@ import { CompanyBranchPanel } from '@/company/panels/CompanyBranchPanel';
 import { CompanyReportPanel } from '@/company/panels/CompanyReportPanel';
 import { CompanyInvoicePanel } from '@/company/panels/CompanyInvoicePanel';
 import { CompanySettingsPanel } from '@/company/panels/CompanySettingsPanel';
+import { CompanyPersonalProfilePanel } from '@/company/panels/CompanyPersonalProfilePanel';
+import { CompanyGlobalSearch } from '@/company/components/CompanyGlobalSearch';
+import { CompanyPayrollPanel } from '@/company/panels/CompanyPayrollPanel';
 
 /* ═══ Hooks ═══ */
 function useIsDesktop() {
@@ -28,47 +31,20 @@ function useIsDesktop() {
 }
 
 /* ═══ Navigation Config ═══ */
-type NavKey = 'dashboard' | 'employees' | 'attendance' | 'branches' | 'report' | 'invoices' | 'settings';
+type NavKey = 'dashboard' | 'employees' | 'attendance' | 'branches' | 'report' | 'payroll' | 'invoices' | 'settings' | 'profile';
 type NavItem = { key: NavKey; label: string; icon: typeof LayoutDashboard };
 type NavGroup = { label: string; items: NavItem[] };
-
-const NAV_GROUPS: NavGroup[] = [
-    {
-        label: 'Utama',
-        items: [{ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }],
-    },
-    {
-        label: 'Manajemen',
-        items: [
-            { key: 'employees', label: 'Karyawan', icon: Users },
-            { key: 'branches', label: 'Cabang', icon: MapPin },
-        ],
-    },
-    {
-        label: 'Kehadiran',
-        items: [
-            { key: 'attendance', label: 'Absensi', icon: ClipboardList },
-            { key: 'report', label: 'Laporan', icon: ClipboardList },
-        ],
-    },
-    {
-        label: 'Billing',
-        items: [{ key: 'invoices', label: 'Tagihan', icon: Receipt }],
-    },
-    {
-        label: 'Sistem',
-        items: [{ key: 'settings', label: 'Pengaturan', icon: Settings }],
-    },
-];
 
 const SECTION_META: Record<NavKey, { title: string; subtitle: string }> = {
     dashboard: { title: 'Dashboard', subtitle: 'Ringkasan perusahaan Anda.' },
     employees: { title: 'Karyawan', subtitle: 'Kelola data karyawan perusahaan.' },
     attendance: { title: 'Kehadiran', subtitle: 'Pantau kehadiran hari ini.' },
-    branches: { title: 'Cabang', subtitle: 'Kelola lokasi cabang.' },
-    report: { title: 'Laporan Kehadiran', subtitle: 'Laporan dan rekap absensi.' },
+    branches: { title: 'Lokasi', subtitle: 'Kelola titik kerja dan geofence perusahaan.' },
+    report: { title: 'Laporan & Rekap', subtitle: 'Rekap absensi dan laporan harian karyawan.' },
+    payroll: { title: 'Payroll', subtitle: 'Kelola komponen gaji, payroll profile, dan payroll run.' },
     invoices: { title: 'Tagihan', subtitle: 'Riwayat tagihan subscription.' },
     settings: { title: 'Pengaturan', subtitle: 'Konfigurasi perusahaan.' },
+    profile: { title: 'Profil Personal', subtitle: 'Kelola akun pribadi admin perusahaan.' },
 };
 
 /* ═══ Sidebar Accent ═══ */
@@ -94,6 +70,39 @@ export function CompanyAdminLayout() {
     const curveSize = 32;
     const activeMeta = SECTION_META[activeNav];
     const companyName = user?.company?.name ?? 'Perusahaan';
+    const hasPayroll = user?.active_products?.includes('payroll') ?? false;
+    const navGroups: NavGroup[] = [
+        {
+            label: 'Utama',
+            items: [{ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+        },
+        {
+            label: 'Manajemen',
+            items: [
+                { key: 'employees', label: 'Karyawan', icon: Users },
+                { key: 'branches', label: 'Lokasi', icon: MapPin },
+            ],
+        },
+        {
+            label: 'Kehadiran',
+            items: [
+                { key: 'attendance', label: 'Absensi', icon: ClipboardList },
+                { key: 'report', label: 'Laporan', icon: ClipboardList },
+            ],
+        },
+        ...(hasPayroll ? [{
+            label: 'Payroll',
+            items: [{ key: 'payroll' as NavKey, label: 'Payroll', icon: Receipt }],
+        }] : []),
+        {
+            label: 'Billing',
+            items: [{ key: 'invoices', label: 'Tagihan', icon: Receipt }],
+        },
+        {
+            label: 'Sistem',
+            items: [{ key: 'settings', label: 'Pengaturan', icon: Settings }],
+        },
+    ];
 
     const handleSelectNav = (key: NavKey) => {
         setActiveNav(key);
@@ -114,14 +123,22 @@ export function CompanyAdminLayout() {
         return () => document.removeEventListener('mousedown', handler);
     }, [profileOpen]);
 
+    useEffect(() => {
+        if (!hasPayroll && activeNav === 'payroll') {
+            setActiveNav('dashboard');
+        }
+    }, [activeNav, hasPayroll]);
+
     const renderContent = () => {
         switch (activeNav) {
             case 'employees': return <CompanyEmployeePanel T={T} isDesktop={isDesktop} />;
             case 'attendance': return <CompanyAttendancePanel T={T} isDesktop={isDesktop} />;
             case 'branches': return <CompanyBranchPanel T={T} isDesktop={isDesktop} />;
             case 'report': return <CompanyReportPanel T={T} isDesktop={isDesktop} />;
+            case 'payroll': return <CompanyPayrollPanel T={T} isDesktop={isDesktop} />;
             case 'invoices': return <CompanyInvoicePanel T={T} isDesktop={isDesktop} />;
             case 'settings': return <CompanySettingsPanel T={T} isDesktop={isDesktop} />;
+            case 'profile': return <CompanyPersonalProfilePanel T={T} isDesktop={isDesktop} />;
             default: return <CompanyDashboardPanel T={T} isDesktop={isDesktop} onNavigate={k => setActiveNav(k as NavKey)} />;
         }
     };
@@ -171,7 +188,7 @@ export function CompanyAdminLayout() {
 
                         {/* Nav Groups */}
                         <div style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
-                            {NAV_GROUPS.map(group => (
+                            {navGroups.map(group => (
                                 <div key={group.label} style={{ marginBottom: 6 }}>
                                     {!sidebarCollapsed && (
                                         <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(110,231,183,.45)', textTransform: 'uppercase', letterSpacing: 1.2, padding: '8px 12px 4px', userSelect: 'none' }}>
@@ -249,6 +266,8 @@ export function CompanyAdminLayout() {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <CompanyGlobalSearch T={T} onNavigate={handleSelectNav} />
+
                             <button onClick={toggleTheme} style={{ width: 38, height: 38, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.textSub }} aria-label="Toggle theme">
                                 {isDark ? <Sun size={16} color={T.gold} /> : <Moon size={16} color={T.info} />}
                             </button>
@@ -292,7 +311,7 @@ export function CompanyAdminLayout() {
                                         </div>
                                         <div style={{ padding: '6px' }}>
                                             {[
-                                                { icon: UserCircle, label: 'Profil', desc: 'Informasi akun', action: () => { setProfileOpen(false); setActiveNav('settings'); } },
+                                                { icon: UserCircle, label: 'Profil', desc: 'Informasi akun pribadi', action: () => { setProfileOpen(false); setActiveNav('profile'); } },
                                                 { icon: isDark ? Sun : Moon, label: isDark ? 'Light Mode' : 'Dark Mode', desc: `Saat ini: ${isDark ? 'Dark' : 'Light'}`, action: () => { toggleTheme(); setProfileOpen(false); } },
                                             ].map((item, idx) => (
                                                 <button key={idx} onClick={item.action} style={{
@@ -354,9 +373,12 @@ export function CompanyAdminLayout() {
                                 <div style={{ fontSize: 10, color: T.textMuted, marginTop: 1 }}>{activeMeta.title}</div>
                             </div>
                         </div>
-                        <button onClick={toggleTheme} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Toggle theme">
-                            {isDark ? <Sun size={14} color={T.gold} /> : <Moon size={14} color={T.info} />}
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <CompanyGlobalSearch T={T} onNavigate={handleSelectNav} isMobile />
+                            <button onClick={toggleTheme} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Toggle theme">
+                                {isDark ? <Sun size={14} color={T.gold} /> : <Moon size={14} color={T.info} />}
+                            </button>
+                        </div>
                     </header>
 
                     <main style={{ padding: '76px var(--cx-mobile-gutter, 16px) 104px' }}>
@@ -417,11 +439,45 @@ export function CompanyAdminLayout() {
                             </button>
                         </div>
 
-                        {NAV_GROUPS.map(group => (
+                        <button
+                            onClick={() => { setMobileMenuOpen(false); setActiveNav('profile'); }}
+                            style={{
+                                width: '100%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                padding: '12px 14px',
+                                borderRadius: 14,
+                                border: `1px solid ${T.border}`,
+                                background: T.card,
+                                marginBottom: 16,
+                                textAlign: 'left',
+                            }}
+                        >
+                            <div style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 12,
+                                background: `${T.primary}14`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: T.primary,
+                                flexShrink: 0,
+                            }}>
+                                <UserCircle size={18} />
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 12, fontWeight: 800, color: T.text }}>Profil Saya</div>
+                                <div style={{ fontSize: 10, color: T.textMuted }}>Edit nama dan email akun admin</div>
+                            </div>
+                        </button>
+
+                        {navGroups.map((group) => (
                             <div key={group.label} style={{ marginBottom: 16 }}>
                                 <div style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, paddingLeft: 2 }}>{group.label}</div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                                    {group.items.map(item => {
+                                    {group.items.map((item) => {
                                         const isActive = activeNav === item.key;
                                         const Icon = item.icon;
                                         return (
