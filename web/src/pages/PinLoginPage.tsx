@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Delete, Fingerprint, Loader2, Moon, Sun } from 'lucide-react';
+import { Delete, Fingerprint, Loader2, LockKeyhole, Moon, Sun } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuthStore } from '@/store/authStore';
 import { getHomeDestination, getLoginDestination, navigateToResolvedUrl } from '@/lib/appSurface';
@@ -228,47 +228,46 @@ export function PinLoginPage() {
             </div>
 
             <div style={{ padding: '20px 20px 28px', textAlign: 'center', flexShrink: 0 }}>
-                <button
-                    onClick={toggleTheme}
-                    aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                    style={{
-                        width: '100%',
-                        maxWidth: 280,
-                        height: 42,
-                        borderRadius: 14,
-                        border: `1px solid ${T.border}`,
-                        background: isDark ? 'rgba(255,255,255,0.04)' : '#FFFFFF',
-                        color: T.text,
-                        fontSize: 12,
-                        fontWeight: 800,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 10,
-                        marginBottom: 12,
-                        boxShadow: isDark ? 'none' : '0 12px 24px rgba(15,23,42,0.08)',
-                    }}
-                >
-                    {isDark ? <Sun size={16} color={T.gold} /> : <Moon size={16} color="#0A4E87" />}
-                    {isDark ? 'Light Mode' : 'Dark Mode'}
-                </button>
-                <button
-                    onClick={() => navigateToResolvedUrl(getLoginDestination('company_admin'), navigate, false)}
-                    style={{
-                        width: '100%',
-                        maxWidth: 280,
-                        height: 42,
-                        borderRadius: 14,
-                        background: 'transparent',
-                        border: `1px solid ${T.border}`,
-                        color: T.textMuted,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        marginBottom: 12,
-                    }}
-                >
-                    Admin Login
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 12 }}>
+                    <button
+                        onClick={toggleTheme}
+                        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                        title={isDark ? 'Light mode' : 'Dark mode'}
+                        style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 14,
+                            border: `1px solid ${T.border}`,
+                            background: isDark ? 'rgba(255,255,255,0.04)' : '#FFFFFF',
+                            color: T.text,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: isDark ? 'none' : '0 12px 24px rgba(15,23,42,0.08)',
+                        }}
+                    >
+                        {isDark ? <Sun size={17} color={T.gold} /> : <Moon size={17} color="#0A4E87" />}
+                    </button>
+                    <button
+                        onClick={() => navigateToResolvedUrl(getLoginDestination('company_admin'), navigate, false)}
+                        aria-label="Admin login"
+                        title="Admin login"
+                        style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 14,
+                            border: `1px solid ${T.border}`,
+                            background: isDark ? 'rgba(255,255,255,0.04)' : '#FFFFFF',
+                            color: T.textMuted,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: isDark ? 'none' : '0 12px 24px rgba(15,23,42,0.08)',
+                        }}
+                    >
+                        <LockKeyhole size={17} />
+                    </button>
+                </div>
                 <div style={{ fontSize: 10, color: `${T.textMuted}90` }}>Corextor Platform v1.0.0</div>
             </div>
 

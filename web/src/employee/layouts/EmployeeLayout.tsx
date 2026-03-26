@@ -103,6 +103,9 @@ export function EmployeeLayout() {
     const headerActionShadow = isDark
         ? T.shadowSm
         : '0 10px 18px rgba(8,49,87,.1), inset 0 1px 0 rgba(255,255,255,.22)';
+    const mobileHeaderBackground = isDark
+        ? 'linear-gradient(180deg, rgba(6,14,26,.96) 0%, rgba(11,31,58,.9) 52%, rgba(15,95,166,.74) 100%)'
+        : 'linear-gradient(180deg, #0F5FA6 0%, #176DAE 38%, #1B74B6 100%)';
 
     const handleLogout = async () => {
         await logout();
@@ -124,6 +127,7 @@ export function EmployeeLayout() {
                     <EmployeeHomeTab
                         T={T}
                         isDesktop={isDesktop}
+                        isDark={isDark}
                         onNavigate={setActiveTab}
                     />
                 );
@@ -175,13 +179,15 @@ export function EmployeeLayout() {
                     right: 0,
                     zIndex: 20,
                     padding: isDesktop ? '22px 28px 14px' : '12px 14px 10px',
-                    backdropFilter: 'blur(24px)',
-                    WebkitBackdropFilter: 'blur(24px)',
-                    background: isDark
-                        ? 'linear-gradient(180deg, rgba(9,50,90,.88) 0%, rgba(15,95,166,.62) 100%)'
-                        : 'linear-gradient(180deg, rgba(15,95,166,.94) 0%, rgba(27,116,182,.82) 100%)',
-                    borderBottom: '1px solid rgba(255,255,255,.12)',
-                    boxShadow: '0 10px 28px rgba(8,49,87,.12)',
+                    backdropFilter: isDesktop ? 'blur(24px)' : 'none',
+                    WebkitBackdropFilter: isDesktop ? 'blur(24px)' : 'none',
+                    background: isDesktop
+                        ? (isDark
+                            ? 'linear-gradient(180deg, rgba(9,50,90,.88) 0%, rgba(15,95,166,.62) 100%)'
+                            : 'linear-gradient(180deg, rgba(15,95,166,.94) 0%, rgba(27,116,182,.82) 100%)')
+                        : mobileHeaderBackground,
+                    borderBottom: isDesktop ? '1px solid rgba(255,255,255,.12)' : 'none',
+                    boxShadow: isDesktop ? '0 10px 28px rgba(8,49,87,.12)' : 'none',
                 }}>
                     <div style={{
                         maxWidth: 820,

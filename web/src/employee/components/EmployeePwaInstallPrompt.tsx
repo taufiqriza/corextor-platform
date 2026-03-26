@@ -145,15 +145,15 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
 
     const summary = useMemo(() => {
         if (device === 'ios' && browser === 'safari') {
-            return 'Pasang dari Safari agar absensi dan laporan lebih cepat dibuka seperti aplikasi.';
+            return 'Install Apps dari Safari tanpa App Store, lalu buka langsung dari Home Screen.';
         }
         if (device === 'ios') {
-            return 'Untuk iPhone, buka portal ini di Safari lalu tambahkan ke Home Screen.';
+            return 'Buka di Safari lalu install ke Home Screen. Tidak perlu App Store.';
         }
         if (installEvent) {
-            return 'Chrome mendukung install langsung. Pasang sekarang agar portal terasa seperti web app.';
+            return 'Bisa dipasang sekali klik tanpa Play Store dan langsung muncul di Home Screen.';
         }
-        return 'Gunakan Chrome atau Samsung Internet di Android untuk memasang portal ke layar utama.';
+        return 'Gunakan Chrome atau Samsung Internet untuk install Apps tanpa Play Store.';
     }, [browser, device, installEvent]);
 
     const dismiss = () => {
@@ -247,10 +247,10 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
 
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontSize: 15, fontWeight: 900, color: T.text, fontFamily: "'Sora', sans-serif" }}>
-                                        Pasang Corextor Employee
+                                        Install Apps Corextor
                                     </div>
                                     <div style={{ fontSize: 11, color: T.textMuted, marginTop: 3, lineHeight: 1.6 }}>
-                                        Portal akan lebih cepat dibuka untuk check-in, check-out, dan laporan harian.
+                                        Pasang ke Home Screen agar check-in, check-out, dan laporan harian terasa seperti aplikasi.
                                     </div>
                                 </div>
 
@@ -283,10 +283,10 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
                                 }}
                             >
                                 <div style={{ fontSize: 11, fontWeight: 900, color: T.primary, marginBottom: 4 }}>
-                                    Kenapa perlu dipasang?
+                                    Kenapa perlu install?
                                 </div>
                                 <div style={{ fontSize: 11, color: T.textSub, lineHeight: 1.7 }}>
-                                    Buka lebih cepat dari layar utama, tampilan terasa seperti aplikasi, dan lebih nyaman dipakai setiap hari oleh karyawan lapangan maupun kantor.
+                                    Buka lebih cepat dari Home Screen, terasa seperti aplikasi, dan tidak perlu install dari App Store atau Play Store.
                                 </div>
                             </div>
 
@@ -300,7 +300,7 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
                                             Scroll menu lalu pilih opsi <strong>Add to Home Screen</strong>.
                                         </StepCard>
                                         <StepCard T={T} number={3} title='Konfirmasi "Add"'>
-                                            Setelah itu ikon Corextor akan muncul di Home Screen dan bisa dibuka seperti web app.
+                                            Setelah itu ikon Corextor akan muncul di Home Screen dan bisa dibuka seperti aplikasi.
                                         </StepCard>
                                     </>
                                 )}
@@ -308,7 +308,7 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
                                 {device === 'ios' && browser !== 'safari' && (
                                     <>
                                         <StepCard T={T} number={1} title="Buka portal ini di Safari">
-                                            iPhone hanya mendukung pemasangan web app dari Safari. Salin atau buka ulang portal di Safari.
+                                            iPhone hanya mendukung install dari Safari. Salin atau buka ulang portal di Safari.
                                         </StepCard>
                                         <StepCard T={T} number={2} title="Tap Share lalu Add to Home Screen">
                                             Setelah dibuka di Safari, gunakan menu Share lalu pilih <strong>Add to Home Screen</strong>.
@@ -319,7 +319,7 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
                                 {device === 'android' && installEvent && (
                                     <>
                                         <StepCard T={T} number={1} title="Install langsung dari Chrome">
-                                            Browser ini sudah mendukung pemasangan langsung. Tekan tombol install di bawah untuk melanjutkan.
+                                            Browser ini sudah mendukung pemasangan langsung. Tekan tombol di bawah dan aplikasi akan dipasang ke Home Screen.
                                         </StepCard>
                                         <button
                                             onClick={installNow}
@@ -439,7 +439,7 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
 
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 12, fontWeight: 900, color: T.text, lineHeight: 1.2 }}>
-                                Pasang sebagai Web App
+                                Install Apps
                             </div>
                             <div
                                 style={{
@@ -475,7 +475,7 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
                                 }}
                             >
                                 <Download size={13} />
-                                {installing ? '...' : 'Install'}
+                                {installing ? '...' : 'Pasang'}
                             </button>
                         ) : (
                             <button
@@ -492,7 +492,7 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
                                     flexShrink: 0,
                                 }}
                             >
-                                Lihat
+                                Detail
                             </button>
                         )}
 

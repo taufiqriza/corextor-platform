@@ -306,6 +306,14 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
         { label: 'Branch', value: branchName, icon: MapPin },
         { label: 'Status', value: attendanceLabel, icon: Shield },
     ];
+    const heroCardBackground = isDark ? 'rgba(10,18,32,.78)' : 'rgba(255,255,255,.96)';
+    const heroCardText = isDark ? '#E2E8F0' : '#0F172A';
+    const heroCardMuted = isDark ? '#94A3B8' : '#64748B';
+    const heroCardShadow = isDark ? '0 18px 34px rgba(2,6,23,.4)' : '0 18px 34px rgba(8,49,87,.16)';
+    const heroMetricBackground = isDark
+        ? 'linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,.03) 100%)'
+        : 'linear-gradient(180deg, #F8FBFF 0%, #F1F7FF 100%)';
+    const heroMetricBorder = isDark ? '1px solid rgba(255,255,255,.08)' : '1px solid rgba(15,23,42,.06)';
 
     const sections: {
         title: string;
@@ -576,11 +584,12 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
                     </div>
 
                     <div style={{
-                        background: 'rgba(255,255,255,.96)',
-                        color: '#0F172A',
+                        background: heroCardBackground,
+                        color: heroCardText,
                         borderRadius: 22,
                         padding: isDesktop ? '14px' : '12px',
-                        boxShadow: '0 18px 34px rgba(8,49,87,.16)',
+                        boxShadow: heroCardShadow,
+                        border: isDark ? '1px solid rgba(255,255,255,.08)' : undefined,
                     }}>
                         <div style={{
                             display: 'flex',
@@ -614,7 +623,7 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
                                 <div style={{
                                     minWidth: 0,
                                     fontSize: 10.5,
-                                    color: '#64748B',
+                                    color: heroCardMuted,
                                     fontWeight: 700,
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
@@ -649,15 +658,15 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
                                 <div key={item.label} style={{
                                     borderRadius: 14,
                                     padding: isDesktop ? '9px 9px 8px' : '8px 8px 7px',
-                                    background: 'linear-gradient(180deg, #F8FBFF 0%, #F1F7FF 100%)',
-                                    border: '1px solid rgba(15,23,42,.06)',
+                                    background: heroMetricBackground,
+                                    border: heroMetricBorder,
                                 }}>
                                     <div style={{
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: 5,
                                         fontSize: 8.5,
-                                        color: '#64748B',
+                                        color: heroCardMuted,
                                         fontWeight: 700,
                                     }}>
                                         <item.icon size={11} />
@@ -669,7 +678,7 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
                                         lineHeight: 1.1,
                                         fontWeight: 900,
                                         fontFamily: "'Sora', sans-serif",
-                                        color: '#0F172A',
+                                        color: heroCardText,
                                         whiteSpace: 'nowrap',
                                         overflow: 'hidden',
                                         textOverflow: 'ellipsis',

@@ -22,10 +22,11 @@ import { useAuthStore } from '@/store/authStore';
 interface Props {
     T: Theme;
     isDesktop: boolean;
+    isDark: boolean;
     onNavigate: (tab: EmployeeTabId) => void;
 }
 
-export function EmployeeHomeTab({ T, isDesktop, onNavigate }: Props) {
+export function EmployeeHomeTab({ T, isDesktop, isDark, onNavigate }: Props) {
     const user = useAuthStore(state => state.user);
 
     const [now, setNow] = useState(new Date());
@@ -144,6 +145,14 @@ export function EmployeeHomeTab({ T, isDesktop, onNavigate }: Props) {
         { label: 'Selesai', value: loading ? '...' : `${stats.complete}`, note: 'hari', icon: CheckCircle2 },
         { label: 'Streak', value: loading ? '...' : `${stats.streak}`, note: 'hari', icon: Clock3 },
     ];
+    const heroCardBackground = isDark ? 'rgba(10,18,32,.78)' : 'rgba(255,255,255,.96)';
+    const heroCardText = isDark ? '#E2E8F0' : '#0F172A';
+    const heroCardMuted = isDark ? '#94A3B8' : '#64748B';
+    const heroCardShadow = isDark ? '0 18px 34px rgba(2,6,23,.4)' : '0 18px 34px rgba(8,49,87,.16)';
+    const heroMetricBackground = isDark
+        ? 'linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,.03) 100%)'
+        : 'linear-gradient(180deg, #F8FBFF 0%, #F1F7FF 100%)';
+    const heroMetricBorder = isDark ? '1px solid rgba(255,255,255,.08)' : '1px solid rgba(15,23,42,.06)';
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -320,11 +329,12 @@ export function EmployeeHomeTab({ T, isDesktop, onNavigate }: Props) {
                     </div>
 
                     <div style={{
-                        background: 'rgba(255,255,255,.96)',
-                        color: '#0F172A',
+                        background: heroCardBackground,
+                        color: heroCardText,
                         borderRadius: 24,
                         padding: isDesktop ? '14px' : '12px',
-                        boxShadow: '0 18px 34px rgba(8,49,87,.16)',
+                        boxShadow: heroCardShadow,
+                        border: isDark ? '1px solid rgba(255,255,255,.08)' : undefined,
                     }}>
                         <div style={{
                             display: 'flex',
@@ -364,7 +374,7 @@ export function EmployeeHomeTab({ T, isDesktop, onNavigate }: Props) {
                                 <div style={{
                                     minWidth: 0,
                                     fontSize: 10.5,
-                                    color: '#64748B',
+                                    color: heroCardMuted,
                                     fontWeight: 700,
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
@@ -376,7 +386,7 @@ export function EmployeeHomeTab({ T, isDesktop, onNavigate }: Props) {
                             <div style={{
                                 fontSize: 11,
                                 fontWeight: 800,
-                                color: '#0F5FA6',
+                                color: isDark ? '#93C5FD' : '#0F5FA6',
                                 flexShrink: 0,
                                 fontFamily: "'Sora', sans-serif",
                             }}>
@@ -397,6 +407,10 @@ export function EmployeeHomeTab({ T, isDesktop, onNavigate }: Props) {
                                     value={item.value}
                                     note={item.note}
                                     icon={item.icon}
+                                    background={heroMetricBackground}
+                                    border={heroMetricBorder}
+                                    labelColor={heroCardMuted}
+                                    valueColor={heroCardText}
                                 />
                             ))}
                         </div>
@@ -657,25 +671,33 @@ function TopMetric({
     value,
     note,
     icon: Icon,
+    background,
+    border,
+    labelColor,
+    valueColor,
 }: {
     label: string;
     value: string;
     note: string;
     icon: typeof CalendarDays;
+    background: string;
+    border: string;
+    labelColor: string;
+    valueColor: string;
 }) {
     return (
         <div style={{
             borderRadius: 14,
             padding: '8px 8px 7px',
-            background: 'linear-gradient(180deg, #F8FBFF 0%, #F1F7FF 100%)',
-            border: '1px solid rgba(15,23,42,.06)',
+            background,
+            border,
         }}>
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
                 fontSize: 8.5,
-                color: '#64748B',
+                color: labelColor,
                 fontWeight: 700,
             }}>
                 <Icon size={11} />
@@ -687,11 +709,11 @@ function TopMetric({
                     lineHeight: 1.05,
                     fontWeight: 900,
                     fontFamily: "'Sora', sans-serif",
-                    color: '#0F172A',
+                    color: valueColor,
                 }}>
                     {value}
                 </span>
-                <span style={{ fontSize: 9.5, color: '#64748B', fontWeight: 700 }}>
+                <span style={{ fontSize: 9.5, color: labelColor, fontWeight: 700 }}>
                     {note}
                 </span>
             </div>
