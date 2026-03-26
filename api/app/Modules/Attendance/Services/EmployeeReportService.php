@@ -6,6 +6,7 @@ use App\Modules\Attendance\Models\EmployeeReport;
 use App\Modules\Platform\Audit\AuditService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class EmployeeReportService
 {
@@ -190,5 +191,46 @@ class EmployeeReportService
         }
 
         return $attachment;
+    }
+
+    public static function deleteForCompany(
+        int $reportId,
+        int $companyId,
+        int $deletedByUserId,
+    ): void {
+        $report = EmployeeReport::forCompany($companyId)
+            ->with(['branch', 'platformUser'])
+            ->findOrFail($reportId);
+
+        $attachments = collect($report->attachments_json ?? [])
+            ->filter(fn ($attachment) => is_array($attachment) && ! empty($attachment['path']))
+            ->values();
+
+        $managedPaths = $attachments
+            ->pluck('path')
+            ->filter(fn ($path) => is_string($path) && str_starts_with($path, 'employee-reports/'))
+            ->values()
+            ->all();
+
+        if ($managedPaths !== []) {
+            Storage::disk(self::ATTACHMENT_DISK)->delete($managedPaths);
+        }
+
+        $snapshot = [
+            'employee_report_id' => $report->id,
+            'platform_user_id' => $report->platform_user_id,
+            'employee_name' => $report->platformUser?->name,
+            'branch_name' => $report->branch?->name,
+            'report_date' => $report->report_date?->format('Y-m-d'),
+            'title' => $report->title,
+            'attachments_count' => $attachments->count(),
+        ];
+
+        $report->delete();
+
+        AuditService::attendance('employee_report.deleted', [
+            'deleted_by' => $deletedByUserId,
+            'report' => $snapshot,
+        ], $companyId);
     }
 }

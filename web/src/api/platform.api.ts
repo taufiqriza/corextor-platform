@@ -227,6 +227,8 @@ export const attendanceApi = {
         }),
     getCompanyReports: (params?: { from?: string; to?: string; per_page?: number; page?: number }, companyContextId?: number) =>
         api.get<{ status: string; message: string; data: CompanyEmployeeReportPayload }>('/attendance/v1/reports/company', withCompanyContext(companyContextId, { params })),
+    deleteCompanyReport: (reportId: number, companyContextId?: number) =>
+        api.delete(`/attendance/v1/reports/company/${reportId}`, withCompanyContext(companyContextId)),
     downloadReportAttachment: (reportId: number, attachmentIndex: number, companyContextId?: number) =>
         api.get(`/attendance/v1/reports/${reportId}/attachments/${attachmentIndex}`, {
             ...withCompanyContext(companyContextId),
@@ -243,6 +245,8 @@ export const attendanceApi = {
         api.get<{ status: string; message: string; data: AttendanceAdminReportPayload }>('/attendance/v1/attendance/report', withCompanyContext(companyContextId, { params })),
     correctAttendance: (id: number, data: { time_in?: string; time_out?: string; note?: string }, companyContextId?: number) =>
         api.put(`/attendance/v1/attendance/${id}/correct`, data, withCompanyContext(companyContextId)),
+    deleteAttendance: (id: number, companyContextId?: number) =>
+        api.delete(`/attendance/v1/attendance/${id}`, withCompanyContext(companyContextId)),
     getLogs: (companyContextId?: number) => api.get('/attendance/v1/attendance/logs', withCompanyContext(companyContextId)),
 };
 

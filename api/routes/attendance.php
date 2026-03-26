@@ -61,8 +61,10 @@ Route::prefix('attendance/v1')->group(function () {
         Route::middleware('role:company_admin,super_admin,platform_staff')->group(function () {
             Route::get('/attendance/report', [AttendanceRecordController::class, 'report']);
             Route::put('/attendance/{id}/correct', [AttendanceRecordController::class, 'correct']);
+            Route::delete('/attendance/{id}', [AttendanceRecordController::class, 'destroy']);
             Route::get('/attendance/logs', [AttendanceRecordController::class, 'logs']);
             Route::get('/reports/company', [EmployeeReportController::class, 'companyReports']);
+            Route::delete('/reports/company/{reportId}', [EmployeeReportController::class, 'destroy']);
         });
     });
 });

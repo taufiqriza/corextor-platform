@@ -146,6 +146,27 @@ class EmployeeReportController extends Controller
         );
     }
 
+    /**
+     * DELETE /attendance/v1/reports/company/{reportId} (admin only)
+     */
+    public function destroy(Request $request, int $reportId): JsonResponse
+    {
+        $companyId = (int) $request->attributes->get('auth_company_id');
+        $deletedBy = (int) $request->attributes->get('auth_user_id');
+
+        try {
+            EmployeeReportService::deleteForCompany(
+                reportId: $reportId,
+                companyId: $companyId,
+                deletedByUserId: $deletedBy,
+            );
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return ApiResponse::notFound('Laporan tidak ditemukan.');
+        }
+
+        return ApiResponse::success(message: 'Laporan berhasil dihapus.');
+    }
+
     private function transformPaginator($paginator): array
     {
         return [

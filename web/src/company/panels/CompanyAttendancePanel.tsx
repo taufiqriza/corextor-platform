@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
     AlertCircle, Building2, Calendar, CheckCircle2, Clock, ClipboardList,
-    Loader2, MapPinned, Pencil, RefreshCcw, Search, X,
+    Eye, Loader2, MapPinned, Pencil, RefreshCcw, Search, Trash2, X,
 } from 'lucide-react';
 import { AttendanceEvidenceSummary } from '@/components/attendance/AttendanceEvidenceSummary';
 import type { Theme } from '@/theme/tokens';
@@ -28,6 +28,8 @@ export function CompanyAttendancePanel({ T, isDesktop, companyContextId }: Props
     const [branchFilter, setBranchFilter] = useState<'all' | number>('all');
     const [detailRecordId, setDetailRecordId] = useState<number | null>(null);
     const [detailToken, setDetailToken] = useState(0);
+    const [deletingRecordId, setDeletingRecordId] = useState<number | null>(null);
+    const [actionNotice, setActionNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
 
     // Correction
     const [correcting, setCorrecting] = useState<any>(null);
@@ -60,6 +62,11 @@ export function CompanyAttendancePanel({ T, isDesktop, companyContextId }: Props
     }, [companyContextId]);
 
     useEffect(() => { load(); }, [attendanceModeFilter, branchFilter, companyContextId, page, selectedDate]);
+    useEffect(() => {
+        if (!actionNotice) return undefined;
+        const timer = window.setTimeout(() => setActionNotice(null), 2600);
+        return () => window.clearTimeout(timer);
+    }, [actionNotice]);
 
     const records = payload?.pagination.data ?? [];
     const stats = payload?.stats ?? { total: 0, present: 0, complete: 0, ongoing: 0, corrected: 0, office: 0, field: 0 };
@@ -82,6 +89,37 @@ export function CompanyAttendancePanel({ T, isDesktop, companyContextId }: Props
             setTimeout(() => { setCorrecting(null); load(); }, 1000);
         } catch (err: any) { setCorrMsg(err?.response?.data?.message ?? 'Gagal'); }
         finally { setCorrSaving(false); }
+    };
+
+    const handleDeleteAttendance = async (record: typeof records[number]) => {
+        if (deletingRecordId === record.id) return;
+
+        const accepted = window.confirm(
+            `Hapus data absensi ${record.employee_name ?? 'karyawan'} pada ${record.date}? Selfie dan bukti lokasinya juga akan dihapus.`,
+        );
+
+        if (!accepted) return;
+
+        setDeletingRecordId(record.id);
+        setActionNotice(null);
+
+        try {
+            await attendanceApi.deleteAttendance(record.id, companyContextId);
+            if (detailRecordId === record.id) {
+                setDetailRecordId(null);
+            }
+            setActionNotice({ kind: 'success', text: 'Data absensi berhasil dihapus.' });
+            const nextPage = page > 1 && records.length === 1 ? page - 1 : page;
+            if (nextPage !== page) {
+                setPage(nextPage);
+            } else {
+                await load();
+            }
+        } catch (err: any) {
+            setActionNotice({ kind: 'error', text: err?.response?.data?.message ?? 'Gagal menghapus data absensi.' });
+        } finally {
+            setDeletingRecordId(null);
+        }
     };
 
     const s = {
@@ -229,6 +267,21 @@ export function CompanyAttendancePanel({ T, isDesktop, companyContextId }: Props
                     </div>
                 </div>
 
+                {actionNotice && (
+                    <div style={{
+                        marginTop: 10,
+                        borderRadius: 14,
+                        border: `1px solid ${actionNotice.kind === 'success' ? `${T.success}40` : `${T.danger}40`}`,
+                        background: actionNotice.kind === 'success' ? `${T.success}10` : `${T.danger}10`,
+                        color: actionNotice.kind === 'success' ? T.success : T.danger,
+                        padding: '10px 14px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                    }}>
+                        {actionNotice.text}
+                    </div>
+                )}
+
                 {loading ? (
                     <div style={{ padding: 40, textAlign: 'center' }}>
                         <Loader2 size={22} color={T.primary} style={{ animation: 'spin 1s linear infinite', display: 'block', margin: '0 auto 8px' }} />
@@ -306,11 +359,20 @@ export function CompanyAttendancePanel({ T, isDesktop, companyContextId }: Props
                                                 }}
                                                 style={actionButtonStyle(T, 'neutral')}
                                             >
+                                                <Eye size={11} />
                                                 Detail
                                             </button>
                                             <button onClick={() => {
                                                 setCorrecting(r); setCorrTimeIn(r.time_in ?? ''); setCorrTimeOut(r.time_out ?? ''); setCorrNote(''); setCorrMsg('');
-                                            }} style={actionButtonStyle(T, 'primary')}><Pencil size={10} /> Koreksi</button>
+                                            }} style={actionButtonStyle(T, 'primary')}><Pencil size={11} /> Koreksi</button>
+                                            <button
+                                                onClick={() => void handleDeleteAttendance(r)}
+                                                disabled={deletingRecordId === r.id}
+                                                style={actionButtonStyle(T, 'danger', deletingRecordId === r.id)}
+                                            >
+                                                {deletingRecordId === r.id ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={11} />}
+                                                Hapus
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -350,14 +412,6 @@ export function CompanyAttendancePanel({ T, isDesktop, companyContextId }: Props
                                         <div style={{ fontSize: 9, color: T.textMuted, fontWeight: 700, textTransform: 'uppercase' }}>Out</div>
                                         <div style={{ fontSize: 14, fontWeight: 800, color: r.time_out ? T.info : T.textMuted, fontFamily: "'JetBrains Mono', monospace" }}>{formatTime(r.time_out)}</div>
                                     </div>
-                                    <div style={{ marginLeft: 'auto' }}>
-                                        <button onClick={() => {
-                                            setCorrecting(r); setCorrTimeIn(r.time_in ?? ''); setCorrTimeOut(r.time_out ?? ''); setCorrNote(''); setCorrMsg('');
-                                        }} style={{
-                                            fontSize: 10, fontWeight: 700, color: T.primary, display: 'flex', alignItems: 'center', gap: 4,
-                                            padding: '5px 10px', borderRadius: 8, border: `1px solid ${T.primary}30`, background: `${T.primary}08`,
-                                        }}><Pencil size={10} /> Koreksi</button>
-                                    </div>
                                 </div>
                                 <div style={{ marginTop: 10 }}>
                                     <AttendanceEvidenceSummary
@@ -380,11 +434,21 @@ export function CompanyAttendancePanel({ T, isDesktop, companyContextId }: Props
                                         }}
                                         style={actionButtonStyle(T, 'neutral')}
                                     >
+                                        <Eye size={11} />
                                         Detail
                                     </button>
                                     <button onClick={() => {
                                         setCorrecting(r); setCorrTimeIn(r.time_in ?? ''); setCorrTimeOut(r.time_out ?? ''); setCorrNote(''); setCorrMsg('');
-                                    }} style={actionButtonStyle(T, 'primary')}><Pencil size={10} /> Koreksi</button>
+                                    }} style={actionButtonStyle(T, 'primary')}><Pencil size={11} /> Koreksi</button>
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleDeleteAttendance(r)}
+                                        disabled={deletingRecordId === r.id}
+                                        style={actionButtonStyle(T, 'danger', deletingRecordId === r.id)}
+                                    >
+                                        {deletingRecordId === r.id ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={11} />}
+                                        Hapus
+                                    </button>
                                 </div>
                             </div>
                         ))}
@@ -507,18 +571,26 @@ function miniModeBadge(T: Theme, mode?: AttendanceMode | null): React.CSSPropert
     };
 }
 
-function actionButtonStyle(T: Theme, tone: 'primary' | 'neutral'): React.CSSProperties {
+function actionButtonStyle(T: Theme, tone: 'primary' | 'neutral' | 'danger', disabled = false): React.CSSProperties {
+    const palette = tone === 'primary'
+        ? { border: `${T.primary}30`, background: `${T.primary}08`, color: T.primary }
+        : tone === 'danger'
+            ? { border: `${T.danger}26`, background: `${T.danger}08`, color: T.danger }
+            : { border: T.border, background: T.bgAlt, color: T.textSub };
+
     return {
         height: 30,
         padding: '0 10px',
         borderRadius: 999,
-        border: `1px solid ${tone === 'primary' ? `${T.primary}30` : T.border}`,
-        background: tone === 'primary' ? `${T.primary}08` : T.bgAlt,
-        color: tone === 'primary' ? T.primary : T.textSub,
+        border: `1px solid ${palette.border}`,
+        background: palette.background,
+        color: palette.color,
         fontSize: 10,
         fontWeight: 800,
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 4,
+        justifyContent: 'center',
+        gap: 5,
+        opacity: disabled ? 0.65 : 1,
     };
 }

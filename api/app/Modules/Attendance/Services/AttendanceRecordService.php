@@ -9,6 +9,7 @@ use App\Modules\Platform\Audit\AuditService;
 use App\Modules\Platform\Company\Company;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class AttendanceRecordService
 {
@@ -313,6 +314,43 @@ class AttendanceRecordService
     }
 
     /**
+     * Delete an attendance record and managed selfie evidence.
+     */
+    public static function deleteRecord(
+        int $recordId,
+        int $companyId,
+        int $deletedByUserId,
+    ): void {
+        $record = AttendanceRecord::forCompany($companyId)
+            ->with(['branch', 'platformUser'])
+            ->findOrFail($recordId);
+
+        $snapshot = [
+            'record_id' => $record->id,
+            'platform_user_id' => $record->platform_user_id,
+            'employee_name' => $record->platformUser?->name,
+            'branch_name' => $record->branch?->name,
+            'date' => $record->date?->format('Y-m-d'),
+            'time_in' => $record->time_in,
+            'time_out' => $record->time_out,
+            'status' => $record->status,
+            'attendance_mode_in' => $record->attendance_mode_in,
+        ];
+
+        self::deleteManagedSelfies([
+            $record->check_in_selfie_path,
+            $record->check_out_selfie_path,
+        ]);
+
+        $record->delete();
+
+        AuditService::attendance('attendance.deleted', [
+            'deleted_by' => $deletedByUserId,
+            'record' => $snapshot,
+        ], $companyId);
+    }
+
+    /**
      * Get attendance audit logs for a company.
      */
     public static function getAuditLogs(
@@ -520,6 +558,23 @@ class AttendanceRecordService
             sprintf('attendance-selfies/%d/%d/%s/%s', $companyId, $platformUserId, now()->format('Y/m'), $action),
             self::SELFIE_DISK,
         );
+    }
+
+    /**
+     * @param  array<int, string|null>  $paths
+     */
+    private static function deleteManagedSelfies(array $paths): void
+    {
+        $managedPaths = collect($paths)
+            ->filter(fn ($path) => is_string($path) && str_starts_with($path, 'attendance-selfies/'))
+            ->values()
+            ->all();
+
+        if ($managedPaths === []) {
+            return;
+        }
+
+        Storage::disk(self::SELFIE_DISK)->delete($managedPaths);
     }
 
     private static function buildLocationPayload(

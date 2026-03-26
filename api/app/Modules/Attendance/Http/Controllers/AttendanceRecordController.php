@@ -218,6 +218,27 @@ class AttendanceRecordController extends Controller
     }
 
     /**
+     * DELETE /attendance/v1/attendance/{id} (admin only)
+     */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $companyId = (int) $request->attributes->get('auth_company_id');
+        $deletedBy = (int) $request->attributes->get('auth_user_id');
+
+        try {
+            AttendanceRecordService::deleteRecord(
+                recordId: $id,
+                companyId: $companyId,
+                deletedByUserId: $deletedBy,
+            );
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return ApiResponse::notFound('Record absensi tidak ditemukan.');
+        }
+
+        return ApiResponse::success(message: 'Data absensi berhasil dihapus.');
+    }
+
+    /**
      * GET /attendance/v1/attendance/logs (admin only)
      */
     public function logs(Request $request): JsonResponse

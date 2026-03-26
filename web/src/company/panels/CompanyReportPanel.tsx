@@ -4,6 +4,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Clock3,
+    Eye,
     File as FileIcon,
     FileText,
     Image as ImageIcon,
@@ -11,6 +12,7 @@ import {
     Paperclip,
     RefreshCcw,
     Search,
+    Trash2,
     Users,
     X,
 } from 'lucide-react';
@@ -68,6 +70,8 @@ export function CompanyReportPanel({ T, isDesktop, companyContextId }: Props) {
     const [dateTo, setDateTo] = useState(today);
     const [page, setPage] = useState(1);
     const [selectedReport, setSelectedReport] = useState<EmployeeReportItem | null>(null);
+    const [deletingReportId, setDeletingReportId] = useState<number | null>(null);
+    const [actionNotice, setActionNotice] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
 
     const loadReports = async (targetPage = page) => {
         setLoading(true);
@@ -89,6 +93,11 @@ export function CompanyReportPanel({ T, isDesktop, companyContextId }: Props) {
     useEffect(() => {
         void loadReports(page);
     }, [companyContextId, dateFrom, dateTo, page]);
+    useEffect(() => {
+        if (!actionNotice) return undefined;
+        const timer = window.setTimeout(() => setActionNotice(null), 2600);
+        return () => window.clearTimeout(timer);
+    }, [actionNotice]);
 
     const reports = payload?.pagination.data ?? [];
     const stats = payload?.stats ?? {
@@ -126,6 +135,37 @@ export function CompanyReportPanel({ T, isDesktop, companyContextId }: Props) {
             await downloadEmployeeReportAttachment(reportId, attachment.download_index, attachment.name, companyContextId);
         } catch {
             // keep the panel stable on download failure
+        }
+    };
+
+    const handleDeleteReport = async (report: EmployeeReportItem) => {
+        if (deletingReportId === report.id) return;
+
+        const accepted = window.confirm(
+            `Hapus laporan "${report.title}" milik ${report.employee_name ?? 'karyawan'}? Lampiran yang tersimpan juga akan ikut dihapus.`,
+        );
+
+        if (!accepted) return;
+
+        setDeletingReportId(report.id);
+        setActionNotice(null);
+
+        try {
+            await attendanceApi.deleteCompanyReport(report.id, companyContextId);
+            if (selectedReport?.id === report.id) {
+                setSelectedReport(null);
+            }
+            setActionNotice({ kind: 'success', text: 'Laporan berhasil dihapus.' });
+            const nextPage = page > 1 && reports.length === 1 ? page - 1 : page;
+            if (nextPage !== page) {
+                setPage(nextPage);
+            } else {
+                await loadReports(page);
+            }
+        } catch (err: any) {
+            setActionNotice({ kind: 'error', text: err?.response?.data?.message ?? 'Gagal menghapus laporan.' });
+        } finally {
+            setDeletingReportId(null);
         }
     };
 
@@ -343,6 +383,21 @@ export function CompanyReportPanel({ T, isDesktop, companyContextId }: Props) {
                     </div>
                 </div>
 
+                {actionNotice && (
+                    <div style={{
+                        marginTop: 10,
+                        borderRadius: 14,
+                        border: `1px solid ${actionNotice.kind === 'success' ? `${T.success}40` : `${T.danger}40`}`,
+                        background: actionNotice.kind === 'success' ? `${T.success}10` : `${T.danger}10`,
+                        color: actionNotice.kind === 'success' ? T.success : T.danger,
+                        padding: '10px 14px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                    }}>
+                        {actionNotice.text}
+                    </div>
+                )}
+
                 {loading ? (
                     <div style={{ padding: 40, textAlign: 'center' }}>
                         <Loader2 size={22} color={T.primary} style={{ animation: 'spin 1s linear infinite', display: 'block', margin: '0 auto 8px' }} />
@@ -429,13 +484,25 @@ export function CompanyReportPanel({ T, isDesktop, companyContextId }: Props) {
                                             </div>
                                         </td>
                                         <td style={s.td}>
-                                            <button
-                                                type="button"
-                                                onClick={() => setSelectedReport(report)}
-                                                style={actionButtonStyle(T)}
-                                            >
-                                                Detail
-                                            </button>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedReport(report)}
+                                                    style={actionButtonStyle(T, 'primary')}
+                                                >
+                                                    <Eye size={11} />
+                                                    Detail
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void handleDeleteReport(report)}
+                                                    disabled={deletingReportId === report.id}
+                                                    style={actionButtonStyle(T, 'danger', deletingReportId === report.id)}
+                                                >
+                                                    {deletingReportId === report.id ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={11} />}
+                                                    Hapus
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -501,13 +568,23 @@ export function CompanyReportPanel({ T, isDesktop, companyContextId }: Props) {
                                     <AttachmentPreviewRow attachments={report.attachments} T={T} />
                                 </div>
 
-                                <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                                <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
                                     <button
                                         type="button"
                                         onClick={() => setSelectedReport(report)}
-                                        style={actionButtonStyle(T)}
+                                        style={actionButtonStyle(T, 'primary')}
                                     >
+                                        <Eye size={11} />
                                         Detail
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleDeleteReport(report)}
+                                        disabled={deletingReportId === report.id}
+                                        style={actionButtonStyle(T, 'danger', deletingReportId === report.id)}
+                                    >
+                                        {deletingReportId === report.id ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={11} />}
+                                        Hapus
                                     </button>
                                 </div>
                             </article>
@@ -909,16 +986,25 @@ function formatBytes(size: number): string {
     return `${size} B`;
 }
 
-function actionButtonStyle(T: Theme): CSSProperties {
+function actionButtonStyle(T: Theme, tone: 'primary' | 'danger', disabled = false): CSSProperties {
+    const palette = tone === 'danger'
+        ? { border: `${T.danger}28`, background: `${T.danger}08`, color: T.danger }
+        : { border: `${T.primary}30`, background: `${T.primary}08`, color: T.primary };
+
     return {
         height: 32,
         padding: '0 12px',
         borderRadius: 999,
-        border: `1px solid ${T.primary}30`,
-        background: `${T.primary}08`,
-        color: T.primary,
+        border: `1px solid ${palette.border}`,
+        background: palette.background,
+        color: palette.color,
         fontSize: 11,
         fontWeight: 800,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        opacity: disabled ? 0.65 : 1,
     };
 }
 
