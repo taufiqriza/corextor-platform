@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import {
     CircleUserRound,
     Camera,
-    CameraOff,
     CheckCircle2,
     Clock3,
     Compass,
@@ -45,6 +44,7 @@ type BannerState = {
 export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const cameraRequestRef = useRef(0);
     const user = useAuthStore(state => state.user);
 
     const [context, setContext] = useState<AttendanceContextPayload | null>(null);
@@ -187,7 +187,9 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
             return;
         }
 
+        const requestId = ++cameraRequestRef.current;
         setCameraError('');
+        setCameraReady(false);
         const targetFacingMode = preferredFacingMode ?? cameraFacingMode;
 
         try {
@@ -204,6 +206,11 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
                 audio: false,
             });
 
+            if (requestId !== cameraRequestRef.current) {
+                stream.getTracks().forEach(track => track.stop());
+                return;
+            }
+
             streamRef.current = stream;
 
             if (videoRef.current) {
@@ -211,9 +218,18 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
                 await videoRef.current.play();
             }
 
+            if (requestId !== cameraRequestRef.current) {
+                stream.getTracks().forEach(track => track.stop());
+                return;
+            }
+
+            setCameraError('');
             setCameraReady(true);
         } catch {
-            setCameraError('Kamera tidak bisa diakses. Pastikan izin kamera diberikan.');
+            if (requestId === cameraRequestRef.current) {
+                setCameraReady(false);
+                setCameraError('Kamera tidak bisa diakses. Pastikan izin kamera diberikan.');
+            }
         }
     }, [cameraFacingMode, stopCamera]);
 
@@ -1316,10 +1332,6 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
                                     <button onClick={() => void toggleCameraFacing()} style={modalButtonStyle(T, false)}>
                                         <RefreshCw size={15} />
                                         {cameraFacingMode === 'user' ? 'Kamera Belakang' : 'Kamera Depan'}
-                                    </button>
-                                    <button onClick={stopCamera} style={modalButtonStyle(T, false)}>
-                                        <CameraOff size={15} />
-                                        Batalkan
                                     </button>
                                 </>
                             )}
