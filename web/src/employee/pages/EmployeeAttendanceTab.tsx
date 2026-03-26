@@ -54,6 +54,7 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
     const [cameraModalOpen, setCameraModalOpen] = useState(false);
     const [cameraError, setCameraError] = useState('');
     const [cameraReady, setCameraReady] = useState(false);
+    const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('user');
     const [selfieDataUrl, setSelfieDataUrl] = useState('');
     const [now, setNow] = useState(new Date());
     const [selectedCheckInMode, setSelectedCheckInMode] = useState<AttendanceMode>('office');
@@ -116,6 +117,7 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
         stopCamera();
         setCameraError('');
         setSelfieDataUrl('');
+        setCameraFacingMode('user');
         setCameraModalOpen(false);
     }, [stopCamera]);
 
@@ -179,20 +181,23 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
         }
     }, [context?.today_record?.attendance_mode_in]);
 
-    const startCamera = useCallback(async () => {
+    const startCamera = useCallback(async (preferredFacingMode?: 'user' | 'environment') => {
         if (!navigator.mediaDevices?.getUserMedia) {
             setCameraError('Browser ini belum mendukung akses kamera.');
             return;
         }
 
         setCameraError('');
+        const targetFacingMode = preferredFacingMode ?? cameraFacingMode;
 
         try {
             stopCamera();
 
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    facingMode: 'user',
+                    facingMode: targetFacingMode === 'environment'
+                        ? { ideal: 'environment' }
+                        : 'user',
                     width: { ideal: 720 },
                     height: { ideal: 1280 },
                 },
@@ -210,7 +215,7 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
         } catch {
             setCameraError('Kamera tidak bisa diakses. Pastikan izin kamera diberikan.');
         }
-    }, [stopCamera]);
+    }, [cameraFacingMode, stopCamera]);
 
     useEffect(() => {
         if (!cameraModalOpen) return;
@@ -234,6 +239,17 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
         setSelfieDataUrl(canvas.toDataURL('image/jpeg', 0.92));
         stopCamera();
     }, [stopCamera]);
+
+    const toggleCameraFacing = useCallback(async () => {
+        if (submitting) return;
+
+        const nextFacingMode = cameraFacingMode === 'user' ? 'environment' : 'user';
+        setCameraFacingMode(nextFacingMode);
+        setSelfieDataUrl('');
+        setCameraReady(false);
+        setCameraError('');
+        await startCamera(nextFacingMode);
+    }, [cameraFacingMode, startCamera, submitting]);
 
     const attendanceMode = useMemo(() => {
         if (!context?.today_record?.time_in) return 'check_in';
@@ -451,6 +467,7 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
             setBanner(null);
             setCameraError('');
             setSelfieDataUrl('');
+            setCameraFacingMode('user');
             setCameraModalOpen(true);
             return;
         }
@@ -1147,7 +1164,7 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
                                             width: '100%',
                                             height: '100%',
                                             objectFit: 'cover',
-                                            transform: 'scaleX(-1)',
+                                            transform: cameraFacingMode === 'user' ? 'scaleX(-1)' : 'none',
                                         }}
                                     />
                                     {!cameraReady && (
@@ -1295,6 +1312,10 @@ export function EmployeeAttendanceTab({ T, isDesktop }: Props) {
                                     <button onClick={captureSelfie} style={modalButtonStyle(T, true)}>
                                         <ScanFace size={15} />
                                         Ambil Selfie
+                                    </button>
+                                    <button onClick={() => void toggleCameraFacing()} style={modalButtonStyle(T, false)}>
+                                        <RefreshCw size={15} />
+                                        {cameraFacingMode === 'user' ? 'Kamera Belakang' : 'Kamera Depan'}
                                     </button>
                                     <button onClick={stopCamera} style={modalButtonStyle(T, false)}>
                                         <CameraOff size={15} />
