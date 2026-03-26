@@ -138,6 +138,14 @@ export const platformApi = {
 
     updateMyProfile: (data: { name?: string; address?: string; phone?: string; email?: string; industry?: string }) =>
         api.put('/platform/v1/company/profile', data),
+    updateMyCompanyLogo: (formData: FormData) =>
+        api.post('/platform/v1/company/profile/logo', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        }),
+    removeMyCompanyLogo: () =>
+        api.delete('/platform/v1/company/profile/logo'),
 
     getMyMembers: () =>
         api.get('/platform/v1/company/members'),

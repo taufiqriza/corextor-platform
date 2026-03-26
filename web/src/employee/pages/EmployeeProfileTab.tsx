@@ -27,6 +27,7 @@ import { useNavigate } from 'react-router-dom';
 import { attendanceApi, platformApi } from '@/api/platform.api';
 import type { AttendanceContextPayload } from '@/types/attendance.types';
 import { getLoginDestination, navigateToResolvedUrl } from '@/lib/appSurface';
+import { normalizePublicAssetUrl } from '@/lib/publicAsset';
 
 interface Props {
     T: Theme;
@@ -277,8 +278,8 @@ export function EmployeeProfileTab({ T, isDesktop, isDark, toggleTheme }: Props)
         .toUpperCase();
     const firstName = (user?.name ?? 'Karyawan').split(' ')[0];
     const companyName = profileContext?.company?.name ?? user?.company?.name ?? 'Corextor';
-    const companyLogo = profileContext?.company?.logo_url ?? user?.company?.logo_url ?? '';
-    const avatarUrl = user?.avatar_url ?? '';
+    const companyLogo = normalizePublicAssetUrl(profileContext?.company?.logo_url ?? user?.company?.logo_url ?? '');
+    const avatarUrl = normalizePublicAssetUrl(user?.avatar_url ?? '');
     const branchName = profileContext?.branch?.name ?? 'Belum ada branch';
     const attendanceStatus = profileContext?.attendance_user.status ?? 'unknown';
     const todayStatus = profileContext?.today_record?.time_out

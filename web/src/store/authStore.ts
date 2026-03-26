@@ -7,6 +7,7 @@ import {
     setSessionRole,
     setSessionToken,
 } from '@/lib/authSession';
+import { normalizePublicAssetUrl } from '@/lib/publicAsset';
 
 interface AuthState {
     user: AuthUser | null;
@@ -123,14 +124,30 @@ onSessionInvalidated(() => {
 
 function normalizeAuthUser(payload: AuthUser | MePayload): AuthUser {
     if ('user' in payload) {
+        const company = payload.company ?? payload.user.company ?? undefined;
+
         return {
             ...payload.user,
-            company: payload.company ?? payload.user.company ?? undefined,
+            avatar_url: normalizePublicAssetUrl(payload.user.avatar_url),
+            company: company
+                ? {
+                    ...company,
+                    logo_url: normalizePublicAssetUrl(company.logo_url),
+                }
+                : undefined,
         };
     }
 
+    const company = payload.company ?? undefined;
+
     return {
         ...payload,
-        company: payload.company ?? undefined,
+        avatar_url: normalizePublicAssetUrl(payload.avatar_url),
+        company: company
+            ? {
+                ...company,
+                logo_url: normalizePublicAssetUrl(company.logo_url),
+            }
+            : undefined,
     };
 }
