@@ -26,6 +26,7 @@ import { getLoginDestination } from "@/lib/appSurface";
 // ─────────────────────────────────────────────
 type Lang = "id" | "en";
 const EMPLOYEE_LOGIN_URL = getLoginDestination("employee");
+const BRAND_ICON = "/corextor-icon.png";
 
 // ─────────────────────────────────────────────
 // COPY
@@ -295,16 +296,13 @@ function Navbar({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
         <a href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 9,
-            background: "linear-gradient(135deg, #2563EB 0%, #1d4ed8 100%)",
+            background: "rgba(255,255,255,0.08)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 0 20px rgba(37,99,235,0.5)",
+            boxShadow: "0 0 20px rgba(37,99,235,0.35)",
+            overflow: "hidden",
+            border: "1px solid rgba(255,255,255,0.1)",
           }}>
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <rect x="2" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.9" />
-              <rect x="10" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.6" />
-              <rect x="2" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.6" />
-              <rect x="10" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.35" />
-            </svg>
+            <img src={BRAND_ICON} alt="Corextor" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <span style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 18, color: "#fff", letterSpacing: "-0.02em" }}>
             Corextor
@@ -1148,13 +1146,8 @@ function Footer({ lang }: { lang: Lang }) {
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 40, marginBottom: 48 }} className="footer-grid">
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-              <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg, #2563EB, #1d4ed8)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-                  <rect x="2" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.9" />
-                  <rect x="10" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.6" />
-                  <rect x="2" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.6" />
-                  <rect x="10" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.35" />
-                </svg>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                <img src={BRAND_ICON} alt="Corextor" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               </div>
               <span style={{ fontFamily: "'Sora', sans-serif", fontWeight: 700, fontSize: 16, color: "#fff", letterSpacing: "-0.02em" }}>Corextor</span>
             </div>

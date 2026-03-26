@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Compass, Download, Share, Smartphone, X } from 'lucide-react';
+import { Download, Share, X } from 'lucide-react';
 import type { Theme } from '@/theme/tokens';
 
 interface Props {
@@ -181,6 +181,7 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
     if (!visible || !device || isStandalone()) return null;
 
     const sheetBottom = `calc(${bottomOffset}px + env(safe-area-inset-bottom))`;
+    const brandIcon = '/corextor-icon.png';
 
     return (
         <>
@@ -234,15 +235,16 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
                                         height: 46,
                                         borderRadius: 16,
                                         flexShrink: 0,
-                                        background: 'linear-gradient(135deg, #1D4ED8 0%, #0F5FA6 54%, #0A1A2D 100%)',
-                                        color: '#fff',
+                                        background: `${T.primary}10`,
+                                        border: `1px solid ${T.primary}20`,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         boxShadow: '0 14px 24px rgba(37,99,235,.22)',
+                                        overflow: 'hidden',
                                     }}
                                 >
-                                    <Smartphone size={20} />
+                                    <img src={brandIcon} alt="Corextor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
 
                                 <div style={{ flex: 1 }}>
@@ -427,14 +429,15 @@ export function EmployeePwaInstallPrompt({ T, bottomOffset = 102 }: Props) {
                                 height: 38,
                                 borderRadius: 13,
                                 flexShrink: 0,
-                                background: 'linear-gradient(135deg, #1D4ED8 0%, #0F5FA6 54%, #0A1A2D 100%)',
-                                color: '#fff',
+                                background: `${T.primary}10`,
+                                border: `1px solid ${T.primary}20`,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
+                                overflow: 'hidden',
                             }}
                         >
-                            {device === 'ios' ? <Compass size={17} /> : <Smartphone size={17} />}
+                            <img src={brandIcon} alt="Corextor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
 
                         <div style={{ flex: 1, minWidth: 0 }}>

@@ -11,15 +11,15 @@
   "lang": "id",
   "icons": [
     {
-      "src": "/corextor-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/corextor-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/corextor-maskable.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/corextor-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
     }
   ]

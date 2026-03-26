@@ -33,6 +33,7 @@ const HERO_FEATURES = [
     { icon: LayoutDashboard, label: 'Portal control' },
     { icon: ShieldCheck, label: 'Secure access' },
 ] as const;
+const BRAND_ICON = '/corextor-icon.png';
 
 export function LoginPage() {
     const { T, isDark, toggleTheme } = useTheme();
@@ -100,19 +101,16 @@ export function LoginPage() {
                                 width: 36,
                                 height: 36,
                                 borderRadius: 10,
-                                background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                                background: isDark ? 'rgba(255,255,255,0.04)' : '#FFFFFF',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                boxShadow: '0 0 24px rgba(37,99,235,0.35)',
+                                boxShadow: isDark ? '0 0 24px rgba(37,99,235,0.2)' : '0 10px 24px rgba(15,23,42,0.08)',
+                                overflow: 'hidden',
+                                border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)'}`,
                             }}
                         >
-                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                                <rect x="2" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.9" />
-                                <rect x="10" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.6" />
-                                <rect x="2" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.6" />
-                                <rect x="10" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.35" />
-                            </svg>
+                            <img src={BRAND_ICON} alt="Corextor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
                         <span
                             style={{

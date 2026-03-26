@@ -68,6 +68,8 @@ const SECTION_META: Record<AdminNavKey, { title: string; subtitle: string }> = {
     settings: { title: 'Settings', subtitle: 'Konfigurasi platform.' },
 };
 
+const BRAND_ICON = '/corextor-icon.png';
+
 export function AdminLayout() {
     const navigate = useNavigate();
     const isDesktop = useIsDesktop();
@@ -172,8 +174,8 @@ export function AdminLayout() {
                         {/* Logo */}
                         <div style={{ height: 72, padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between', borderBottom: '1px solid rgba(255,255,255,.08)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
-                                <div style={{ width: 38, height: 38, borderRadius: 12, background: 'linear-gradient(135deg, #3B82F6, #2563EB)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                    <span style={{ fontSize: 18, fontWeight: 900, color: '#fff', fontFamily: "'Sora', sans-serif" }}>C</span>
+                                <div style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                                    <img src={BRAND_ICON} alt="Corextor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
                                 {!sidebarCollapsed && (
                                     <div>
@@ -364,6 +366,9 @@ export function AdminLayout() {
                             <button onClick={() => setMobileMenuOpen(true)} style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.textSub }} aria-label="Open menu">
                                 <Menu size={15} />
                             </button>
+                            <div style={{ width: 28, height: 28, borderRadius: 9, overflow: 'hidden', border: `1px solid ${T.border}`, background: T.card, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <img src={BRAND_ICON} alt="Corextor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
                             <div>
                                 <div style={{ fontSize: 14, fontWeight: 900, color: T.text, lineHeight: 1.1 }}>Corextor</div>
                                 <div style={{ fontSize: 10, color: T.textMuted, marginTop: 1 }}>{activeMeta.title}</div>
@@ -423,9 +428,14 @@ export function AdminLayout() {
                             <div style={{ width: 36, height: 4, borderRadius: 99, background: T.border }} />
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                            <div>
-                                <div style={{ fontSize: 16, fontWeight: 900, color: T.text }}>Menu</div>
-                                <div style={{ fontSize: 10, color: T.textMuted }}>Corextor Admin</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <div style={{ width: 34, height: 34, borderRadius: 10, overflow: 'hidden', border: `1px solid ${T.border}`, background: T.card, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <img src={BRAND_ICON} alt="Corextor" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 16, fontWeight: 900, color: T.text }}>Menu</div>
+                                    <div style={{ fontSize: 10, color: T.textMuted }}>Corextor Admin</div>
+                                </div>
                             </div>
                             <button onClick={() => setMobileMenuOpen(false)} style={{ width: 32, height: 32, borderRadius: 10, border: `1px solid ${T.border}`, background: T.card, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: T.textSub }}>
                                 <X size={14} />
