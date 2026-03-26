@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { useAuthStore } from '@/store/authStore';
 import { AuthGuard, GuestGuard, PLATFORM_ROLES } from '@/guards/AuthGuard';
@@ -22,8 +22,8 @@ function AppRoutes() {
   if (employeeSurface) {
     return (
       <Routes>
-        <Route path="/" element={<RedirectByAuthPage />} />
-        <Route path="/pin" element={<GuestGuard><PinLoginPage /></GuestGuard>} />
+        <Route path="/" element={<GuestGuard><PinLoginPage /></GuestGuard>} />
+        <Route path="/pin" element={<Navigate to="/" replace />} />
         <Route path="/employee" element={
           <AuthGuard allowedRoles={['employee']}>
             <EmployeeLayout />

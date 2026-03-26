@@ -19,11 +19,13 @@ import {
   LogIn,
   Phone,
 } from "lucide-react";
+import { getLoginDestination } from "@/lib/appSurface";
 
 // ─────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────
 type Lang = "id" | "en";
+const EMPLOYEE_LOGIN_URL = getLoginDestination("employee");
 
 // ─────────────────────────────────────────────
 // COPY
@@ -1114,7 +1116,7 @@ function CTASection({ lang }: { lang: Lang }) {
               <LogIn size={15} />
               {t(copy.cta.btn2, lang)}
             </a>
-            <a href="/pin" style={{
+            <a href={EMPLOYEE_LOGIN_URL} style={{
               display: "inline-flex", alignItems: "center", gap: 8,
               background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
               color: "rgba(255,255,255,0.55)", textDecoration: "none", fontSize: 15,
@@ -1182,7 +1184,7 @@ function Footer({ lang }: { lang: Lang }) {
               links: [
                 { label: lang === "id" ? "Tentang Kami" : "About Us", href: "#" },
                 { label: "Login Admin", href: "/login" },
-                { label: lang === "id" ? "Login Karyawan" : "Employee Login", href: "/pin" },
+                { label: lang === "id" ? "Login Karyawan" : "Employee Login", href: EMPLOYEE_LOGIN_URL },
                 { label: lang === "id" ? "Konsultasi" : "Consult", href: "#consult" },
               ],
             },

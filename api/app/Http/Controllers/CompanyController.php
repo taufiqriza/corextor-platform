@@ -219,6 +219,32 @@ class CompanyController extends Controller
     }
 
     /**
+     * POST /platform/v1/company/profile/logo
+     */
+    public function updateMyLogo(Request $request): JsonResponse
+    {
+        $request->validate([
+            'logo' => 'required|file|mimes:jpg,jpeg,png,webp|max:5120',
+        ]);
+
+        $companyId = $request->attributes->get('auth_company_id');
+        $company = CompanyService::updateLogo($companyId, $request->file('logo'));
+
+        return ApiResponse::success($company);
+    }
+
+    /**
+     * DELETE /platform/v1/company/profile/logo
+     */
+    public function removeMyLogo(Request $request): JsonResponse
+    {
+        $companyId = $request->attributes->get('auth_company_id');
+        $company = CompanyService::removeLogo($companyId);
+
+        return ApiResponse::success($company);
+    }
+
+    /**
      * GET /platform/v1/company/members
      */
     public function myMembers(Request $request): JsonResponse

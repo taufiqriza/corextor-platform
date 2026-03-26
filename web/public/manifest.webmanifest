@@ -2,7 +2,7 @@
   "name": "Corextor Employee",
   "short_name": "Corextor",
   "description": "Portal employee Corextor untuk absensi, laporan, dan akses kerja harian dalam mode web app.",
-  "start_url": "/pin",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#07111E",

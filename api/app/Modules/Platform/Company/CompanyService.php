@@ -5,6 +5,8 @@ namespace App\Modules\Platform\Company;
 use App\Modules\Platform\Audit\AuditService;
 use App\Modules\Platform\Membership\CompanyMembership;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class CompanyService
 {
@@ -66,6 +68,54 @@ class CompanyService
     }
 
     /**
+     * Upload and replace company logo.
+     */
+    public static function updateLogo(int $id, UploadedFile $file): Company
+    {
+        $company = Company::findOrFail($id);
+
+        self::deleteStoredLogoIfManaged($company->getRawOriginal('logo_url'));
+
+        $extension = $file->getClientOriginalExtension() ?: $file->extension() ?: 'png';
+        $path = $file->storeAs(
+            "logos/companies/{$id}",
+            'logo-'.time().'.'.$extension,
+            'public',
+        );
+
+        $company->update([
+            'logo_url' => $path,
+        ]);
+
+        AuditService::platform('company.logo_updated', [
+            'company_id' => $company->id,
+            'logo_url' => $path,
+        ], $company->id);
+
+        return $company->fresh();
+    }
+
+    /**
+     * Remove managed company logo.
+     */
+    public static function removeLogo(int $id): Company
+    {
+        $company = Company::findOrFail($id);
+
+        self::deleteStoredLogoIfManaged($company->getRawOriginal('logo_url'));
+
+        $company->update([
+            'logo_url' => null,
+        ]);
+
+        AuditService::platform('company.logo_removed', [
+            'company_id' => $company->id,
+        ], $company->id);
+
+        return $company->fresh();
+    }
+
+    /**
      * Get company admins for a specific company.
      */
     public static function getAdmins(int $companyId): \Illuminate\Database\Eloquent\Collection
@@ -86,5 +136,14 @@ class CompanyService
             ->with('user')
             ->orderByRaw("FIELD(role, 'company_admin', 'employee')")
             ->get();
+    }
+
+    private static function deleteStoredLogoIfManaged(?string $logoUrl): void
+    {
+        $relativePath = Company::extractManagedLogoPath($logoUrl);
+
+        if ($relativePath) {
+            Storage::disk('public')->delete($relativePath);
+        }
     }
 }

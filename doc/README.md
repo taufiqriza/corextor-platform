@@ -2,9 +2,9 @@
 
 > Main domain: `corextor.com`  
 > Shared API: `api.corextor.com`  
-> First product app: `attendance.corextor.com`  
-> Version: 4.0.0  
-> Last updated: March 10, 2026
+> Employee app: `app.corextor.com`  
+> Version: 5.0.0  
+> Last updated: March 26, 2026
 
 ---
 
@@ -14,9 +14,9 @@ Folder ini berisi blueprint implementasi **Corextor Platform** dengan **Attendan
 
 Status saat ini:
 
-- repository ini masih berisi dokumentasi
-- source tree runtime belum dibuat
-- dokumen disusun agar bisa dipakai langsung sebagai dasar eksekusi sprint-by-sprint
+- repository ini sudah menjadi codebase aktif
+- source tree runtime sudah ada untuk `api/` dan `web/`
+- dokumen lama masih menyimpan sebagian blueprint awal, tetapi deploy dan operasional harus mengikuti runbook terbaru
 
 ---
 
@@ -37,6 +37,7 @@ Set dokumentasi ini sengaja dibagi berdasarkan tanggung jawab, agar tidak saling
 | [`delivery_plan.md`](./delivery_plan.md) | Rencana delivery sprint-by-sprint |
 | [`sprint_checklists.md`](./sprint_checklists.md) | Checklist teknis operasional per sprint |
 | [`backlog.md`](./backlog.md) | Phase 2 dan phase 3 setelah MVP |
+| [`deployment.md`](./deployment.md) | Runbook deploy production dan operasional Hostinger |
 
 ---
 
@@ -55,6 +56,7 @@ Kalau baru masuk ke project ini, baca dengan urutan berikut:
 9. [`database.md`](./database.md)
 10. [`api_spec.md`](./api_spec.md)
 11. [`backlog.md`](./backlog.md)
+12. [`deployment.md`](./deployment.md)
 
 ---
 
@@ -73,6 +75,7 @@ Jika ada konflik antar dokumen, gunakan urutan berikut:
 9. [`delivery_plan.md`](./delivery_plan.md)
 10. [`sprint_checklists.md`](./sprint_checklists.md)
 11. [`backlog.md`](./backlog.md)
+12. [`deployment.md`](./deployment.md)
 
 ---
 
@@ -90,7 +93,7 @@ Jika ada konflik antar dokumen, gunakan urutan berikut:
 
 ### Attendance Product
 
-- frontend di `attendance.corextor.com`
+- frontend employee di `app.corextor.com`
 - branches
 - attendance users
 - attendance PIN login
@@ -120,7 +123,7 @@ Target implementasi:
 ```text
 /corextor-platform
 ├── api/    # shared Corextor backend + Attendance module
-├── web/    # Attendance frontend
+├── web/    # public site + admin + company + employee frontend
 └── doc/    # this documentation set
 ```
 

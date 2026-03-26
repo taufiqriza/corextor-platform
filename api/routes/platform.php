@@ -94,6 +94,8 @@ Route::prefix('platform/v1')->group(function () {
             // Company profile management
             Route::get('/company/profile', [CompanyController::class, 'myProfile']);
             Route::put('/company/profile', [CompanyController::class, 'updateMyProfile']);
+            Route::post('/company/profile/logo', [CompanyController::class, 'updateMyLogo']);
+            Route::delete('/company/profile/logo', [CompanyController::class, 'removeMyLogo']);
 
             // Company members (self-service)
             Route::get('/company/members', [CompanyController::class, 'myMembers']);

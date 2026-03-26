@@ -14,7 +14,7 @@ export function getHomeRoute(role: string | undefined): string {
 
 export function getLoginDestination(role?: string): string {
     if (role === 'employee') {
-        return buildSurfaceUrl('employee', '/pin');
+        return buildSurfaceUrl('employee', '/');
     }
 
     return buildSurfaceUrl('main', '/login');
@@ -32,6 +32,10 @@ export function getHomeDestination(role?: string): string {
 
 export function inferLoginRoleFromPath(pathname: string): string | undefined {
     if (pathname.startsWith('/employee') || pathname.startsWith('/pin')) {
+        return 'employee';
+    }
+
+    if (pathname === '/' && isEmployeeSurface()) {
         return 'employee';
     }
 
