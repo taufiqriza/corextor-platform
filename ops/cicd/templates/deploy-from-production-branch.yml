@@ -193,6 +193,15 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
+      - name: Capture current live release
+        run: |
+          PREVIOUS_RELEASE_ID="$(
+            ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" \
+              "if [ -L '$DEPLOY_BASE/current' ]; then current_target=\$(readlink '$DEPLOY_BASE/current'); basename \"\$current_target\"; fi"
+          )"
+          echo "PREVIOUS_RELEASE_ID=$PREVIOUS_RELEASE_ID" >> "$GITHUB_ENV"
+          echo "Current live release: ${PREVIOUS_RELEASE_ID:-none}"
+
       - name: Generate release id
         run: echo "RELEASE_ID=$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_ENV"
 
@@ -216,6 +225,46 @@ jobs:
             SWITCH_DOCROOTS='$SWITCH_LIVE' \
             RUN_MIGRATIONS='$RUN_MIGRATIONS' \
             bash /tmp/corextor-remote-deploy.sh"
+
+      - name: Post-deploy smoke test
+        if: env.SWITCH_LIVE == '1'
+        env:
+          HEALTH_URL: ${{ vars.VITE_API_URL }}/platform/v1/health
+          MAIN_URL: ${{ vars.VITE_MAIN_APP_ORIGIN }}
+          EMPLOYEE_URL: ${{ vars.VITE_EMPLOYEE_APP_ORIGIN }}/pin
+        run: |
+          echo "Smoke check API: $HEALTH_URL"
+          HEALTH_JSON="$(curl -fsSL "$HEALTH_URL")"
+          printf '%s' "$HEALTH_JSON" | ruby -rjson -e 'j=JSON.parse(STDIN.read); ok=(j["status"]=="success" && j.dig("data","status")=="healthy"); exit(ok ? 0 : 1)'
+
+          echo "Smoke check main app: $MAIN_URL"
+          curl -fsSIL "$MAIN_URL" >/tmp/corextor-main.headers
+          tail -n 5 /tmp/corextor-main.headers
+
+          echo "Smoke check employee app: $EMPLOYEE_URL"
+          curl -fsSIL "$EMPLOYEE_URL" >/tmp/corextor-employee.headers
+          tail -n 5 /tmp/corextor-employee.headers
+
+      - name: Auto rollback on smoke failure
+        if: failure() && env.SWITCH_LIVE == '1' && env.PREVIOUS_RELEASE_ID != ''
+        run: |
+          scp -o StrictHostKeyChecking=no -P "$SSH_PORT" ops/hostinger/rollback-release.sh "$SSH_USER@$SSH_HOST:/tmp/corextor-rollback-release.sh"
+          ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "\
+            DEPLOY_BASE='$DEPLOY_BASE' \
+            PRIMARY_DOCROOT='$PRIMARY_DOCROOT' \
+            TARGET_RELEASE_ID='$PREVIOUS_RELEASE_ID' \
+            bash /tmp/corextor-rollback-release.sh"
+
+      - name: Smoke test after rollback
+        if: failure() && env.SWITCH_LIVE == '1' && env.PREVIOUS_RELEASE_ID != ''
+        env:
+          HEALTH_URL: ${{ vars.VITE_API_URL }}/platform/v1/health
+          MAIN_URL: ${{ vars.VITE_MAIN_APP_ORIGIN }}
+          EMPLOYEE_URL: ${{ vars.VITE_EMPLOYEE_APP_ORIGIN }}/pin
+        run: |
+          curl -fsSL "$HEALTH_URL" | ruby -rjson -e 'j=JSON.parse(STDIN.read); ok=(j["status"]=="success" && j.dig("data","status")=="healthy"); exit(ok ? 0 : 1)'
+          curl -fsSIL "$MAIN_URL" >/dev/null
+          curl -fsSIL "$EMPLOYEE_URL" >/dev/null
 
       - name: Verify production URLs
         run: |

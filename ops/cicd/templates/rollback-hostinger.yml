@@ -1,0 +1,125 @@
+name: Rollback Hostinger Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_release_id:
+        description: Release ID tujuan rollback. Kosongkan untuk rollback ke release sebelumnya.
+        required: false
+        default: ''
+      run_smoke_test:
+        description: Jalankan smoke test setelah rollback
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: corextor-production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    env:
+      HOSTINGER_DEPLOY_BASE: ${{ vars.HOSTINGER_DEPLOY_BASE }}
+      HOSTINGER_PRIMARY_DOCROOT: ${{ vars.HOSTINGER_PRIMARY_DOCROOT }}
+    steps:
+      - name: Resolve rollback settings
+        run: |
+          SSH_HOST_VALUE="${{ vars.HOSTINGER_SSH_HOST }}"
+          if [ -z "$SSH_HOST_VALUE" ]; then
+            SSH_HOST_VALUE="${{ vars.SSH_HOST }}"
+          fi
+          if [ -z "$SSH_HOST_VALUE" ]; then
+            SSH_HOST_VALUE="${{ secrets.HOSTINGER_SSH_HOST }}"
+          fi
+          if [ -z "$SSH_HOST_VALUE" ]; then
+            SSH_HOST_VALUE="${{ secrets.SSH_HOST }}"
+          fi
+
+          SSH_PORT_VALUE="${{ vars.HOSTINGER_SSH_PORT }}"
+          if [ -z "$SSH_PORT_VALUE" ]; then
+            SSH_PORT_VALUE="${{ vars.SSH_PORT }}"
+          fi
+          if [ -z "$SSH_PORT_VALUE" ]; then
+            SSH_PORT_VALUE="${{ secrets.HOSTINGER_SSH_PORT }}"
+          fi
+          if [ -z "$SSH_PORT_VALUE" ]; then
+            SSH_PORT_VALUE="${{ secrets.SSH_PORT }}"
+          fi
+
+          SSH_USER_VALUE="${{ vars.HOSTINGER_SSH_USER }}"
+          if [ -z "$SSH_USER_VALUE" ]; then
+            SSH_USER_VALUE="${{ vars.SSH_USER }}"
+          fi
+          if [ -z "$SSH_USER_VALUE" ]; then
+            SSH_USER_VALUE="${{ secrets.HOSTINGER_SSH_USER }}"
+          fi
+          if [ -z "$SSH_USER_VALUE" ]; then
+            SSH_USER_VALUE="${{ secrets.SSH_USER }}"
+          fi
+
+          SSH_PRIVATE_KEY_VALUE="${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}"
+          if [ -z "$SSH_PRIVATE_KEY_VALUE" ]; then
+            SSH_PRIVATE_KEY_VALUE="${{ secrets.SSH_PRIVATE_KEY }}"
+          fi
+
+          echo "SSH_HOST=$SSH_HOST_VALUE" >> "$GITHUB_ENV"
+          echo "SSH_PORT=$SSH_PORT_VALUE" >> "$GITHUB_ENV"
+          echo "SSH_USER=$SSH_USER_VALUE" >> "$GITHUB_ENV"
+          echo "SSH_PRIVATE_KEY<<__COREXTOR_KEY__" >> "$GITHUB_ENV"
+          printf '%s\n' "$SSH_PRIVATE_KEY_VALUE" >> "$GITHUB_ENV"
+          echo "__COREXTOR_KEY__" >> "$GITHUB_ENV"
+          echo "DEPLOY_BASE=$HOSTINGER_DEPLOY_BASE" >> "$GITHUB_ENV"
+          echo "PRIMARY_DOCROOT=$HOSTINGER_PRIMARY_DOCROOT" >> "$GITHUB_ENV"
+          echo "TARGET_RELEASE_ID=${{ inputs.target_release_id }}" >> "$GITHUB_ENV"
+
+      - name: Validate rollback configuration
+        run: |
+          required_vars=(SSH_HOST SSH_PORT SSH_USER DEPLOY_BASE PRIMARY_DOCROOT)
+          for var_name in "${required_vars[@]}"; do
+            if [ -z "${!var_name:-}" ]; then
+              echo "Missing required variable: $var_name" >&2
+              exit 1
+            fi
+          done
+
+          if [ -z "${SSH_PRIVATE_KEY:-}" ]; then
+            echo "Missing required secret: HOSTINGER_SSH_PRIVATE_KEY or SSH_PRIVATE_KEY" >&2
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Execute remote rollback
+        run: |
+          scp -o StrictHostKeyChecking=no -P "$SSH_PORT" ops/hostinger/rollback-release.sh "$SSH_USER@$SSH_HOST:/tmp/corextor-rollback-release.sh"
+          ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "\
+            DEPLOY_BASE='$DEPLOY_BASE' \
+            PRIMARY_DOCROOT='$PRIMARY_DOCROOT' \
+            TARGET_RELEASE_ID='$TARGET_RELEASE_ID' \
+            bash /tmp/corextor-rollback-release.sh"
+
+      - name: Post-rollback smoke test
+        if: ${{ inputs.run_smoke_test }}
+        env:
+          HEALTH_URL: ${{ vars.VITE_API_URL }}/platform/v1/health
+          MAIN_URL: ${{ vars.VITE_MAIN_APP_ORIGIN }}
+          EMPLOYEE_URL: ${{ vars.VITE_EMPLOYEE_APP_ORIGIN }}/pin
+        run: |
+          curl -fsSL "$HEALTH_URL" | ruby -rjson -e 'j=JSON.parse(STDIN.read); ok=(j["status"]=="success" && j.dig("data","status")=="healthy"); exit(ok ? 0 : 1)'
+          curl -fsSIL "$MAIN_URL" >/tmp/corextor-main.headers
+          tail -n 5 /tmp/corextor-main.headers
+          curl -fsSIL "$EMPLOYEE_URL" >/tmp/corextor-employee.headers
+          tail -n 5 /tmp/corextor-employee.headers

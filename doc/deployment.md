@@ -181,6 +181,10 @@ Workflow production utama:
 
 - [`deploy-hostinger.yml`](../.github/workflows/deploy-hostinger.yml)
 
+Workflow rollback manual:
+
+- [`rollback-hostinger.yml`](../.github/workflows/rollback-hostinger.yml)
+
 Template branch-based flow:
 
 - [`deploy-from-production-branch.yml`](../ops/cicd/templates/deploy-from-production-branch.yml)
@@ -213,6 +217,24 @@ HOSTINGER_SSH_PRIVATE_KEY
 ```
 
 Secret ini harus cocok dengan key yang memang bisa SSH ke Hostinger production.
+
+### Branch protection recommendation
+
+Branch protection tidak dikelola dari file repository, jadi harus diaktifkan sekali di GitHub Settings.
+
+Rule minimal yang direkomendasikan untuk `production`:
+
+- require a pull request before merging
+- require at least 1 approval
+- require status checks to pass:
+  - `build-web`
+  - `deploy`
+- require branches to be up to date before merging
+- block force pushes
+- block branch deletion
+- optional: require review from code owners
+
+File [`CODEOWNERS`](../.github/CODEOWNERS) sudah disiapkan agar opsi `require review from code owners` bisa dipakai tanpa edit tambahan.
 
 ---
 
@@ -250,6 +272,8 @@ Flow normal yang direkomendasikan:
 3. buat PR atau merge `main -> production`
 4. push ke branch `production` memicu workflow deploy otomatis
 5. workflow akan build, package, deploy, lalu verify
+
+Kalau deploy live (`switch_live=true`), workflow sekarang otomatis menjalankan smoke test setelah release switch.
 
 ### Phase A: optional preflight release
 
@@ -323,6 +347,12 @@ Pada akun ini, target switch live yang benar:
 ## 8. Post-Deploy Smoke Test
 
 Jalankan smoke test berikut setelah switch live.
+
+Catatan:
+
+- workflow production sekarang sudah menjalankan smoke test otomatis untuk API, main app, dan employee app
+- jika smoke test otomatis gagal setelah release switch, workflow akan menjalankan rollback otomatis ke release live sebelumnya
+- smoke test manual di bawah tetap dipertahankan untuk operator review
 
 ### Domain reachability
 
@@ -475,6 +505,37 @@ Checklist bootstrap:
 
 ## 12. Rollback Procedure
 
+### Recommended rollback path
+
+Gunakan workflow:
+
+```text
+Rollback Hostinger Production
+```
+
+Input:
+
+```text
+target_release_id = kosongkan untuk rollback ke release sebelumnya
+run_smoke_test = true
+```
+
+Workflow ini memakai script:
+
+- [`rollback-release.sh`](../ops/hostinger/rollback-release.sh)
+
+Yang diubah saat rollback:
+
+- `current`
+- `current-web`
+- symlink docroot live utama
+
+Yang tidak disentuh:
+
+- database
+- shared `.env`
+- shared storage
+
 ### Fast rollback for web/docroot
 
 Cari backup yang otomatis dibuat oleh script:
@@ -549,10 +610,14 @@ curl -s https://api.corextor.com/api/platform/v1/health
 
 - Workflow production utama:
   [`deploy-hostinger.yml`](../.github/workflows/deploy-hostinger.yml)
+- Workflow rollback manual:
+  [`rollback-hostinger.yml`](../.github/workflows/rollback-hostinger.yml)
 - Template branch-based flow:
   [`deploy-from-production-branch.yml`](../ops/cicd/templates/deploy-from-production-branch.yml)
 - Remote server script:
   [`remote-deploy.sh`](../ops/hostinger/remote-deploy.sh)
+- Remote rollback script:
+  [`rollback-release.sh`](../ops/hostinger/rollback-release.sh)
 - Hostinger-specific appendix:
   [`ops/hostinger/README.md`](../ops/hostinger/README.md)
 - Frontend production env template:

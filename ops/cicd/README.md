@@ -89,6 +89,10 @@ Rekomendasi operasional:
 2. izinkan update ke `production` hanya lewat PR dari `main` atau hotfix branch
 3. aktifkan reviewer wajib untuk branch `production`
 4. bila GitHub plan memungkinkan, gunakan environment protection untuk `production`
+5. aktifkan status check wajib:
+   - `build-web`
+   - `deploy`
+6. aktifkan `require review from code owners` bila rule GitHub dipakai
 
 Optional:
 
@@ -142,9 +146,17 @@ Workflow production utama di source repo:
 
 - [`deploy-hostinger.yml`](../../.github/workflows/deploy-hostinger.yml)
 
+Workflow rollback manual:
+
+- [`rollback-hostinger.yml`](../../.github/workflows/rollback-hostinger.yml)
+
 Remote release script:
 
 - [`remote-deploy.sh`](../hostinger/remote-deploy.sh)
+
+Remote rollback script:
+
+- [`rollback-release.sh`](../hostinger/rollback-release.sh)
 
 Source archive packer:
 
@@ -188,6 +200,12 @@ Alur yang paling sehat:
 5. review final
 6. merge PR
 7. GitHub Actions deploy otomatis ke production
+
+Guardrail tambahan yang sekarang direkomendasikan:
+
+8. smoke test otomatis sesudah deploy live
+9. auto rollback jika smoke test gagal
+10. workflow rollback manual jika operator perlu memilih release tertentu
 
 Kalau perlu redeploy tanpa merge baru:
 
