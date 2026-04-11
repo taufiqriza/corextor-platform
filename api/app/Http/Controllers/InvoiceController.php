@@ -3,12 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Modules\Platform\Billing\InvoiceService;
+use App\Modules\Platform\Billing\TripayInvoicePaymentService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
+    public function __construct(
+        private TripayInvoicePaymentService $tripayInvoicePaymentService,
+    ) {}
+
     /**
      * GET /platform/v1/invoices (platform team — all invoices with stats)
      */
@@ -107,6 +112,33 @@ class InvoiceController extends Controller
         ]);
     }
 
+    /**
+     * POST /platform/v1/company/invoices/{id}/payments/tripay
+     */
+    public function createMyTripayPaymentSession(Request $request, int $id): JsonResponse
+    {
+        $companyId = (int) $request->attributes->get('auth_company_id');
+        $invoice = InvoiceService::findOrFail($id);
+
+        if ((int) $invoice->company_id !== $companyId) {
+            return ApiResponse::forbidden('Invoice ini tidak termasuk company Anda.');
+        }
+
+        try {
+            $session = $this->tripayInvoicePaymentService->createOrReuseCheckout($invoice);
+
+            return ApiResponse::success(
+                data: [
+                    'invoice' => self::transform($invoice->fresh(['company', 'items'])),
+                    'payment_session' => $session,
+                ],
+                message: 'Tripay checkout ready',
+            );
+        } catch (\RuntimeException $e) {
+            return ApiResponse::badRequest($e->getMessage());
+        }
+    }
+
     // ── Transform ──
 
     private static function transform($invoice): array
@@ -119,6 +151,12 @@ class InvoiceController extends Controller
             'status'          => $invoice->status,
             'currency'        => $invoice->currency,
             'amount_total'    => (float) $invoice->amount_total,
+            'payment_provider' => $invoice->payment_provider,
+            'payment_reference' => $invoice->payment_reference,
+            'payment_channel_code' => $invoice->payment_channel_code,
+            'payment_checkout_url' => $invoice->payment_checkout_url,
+            'payment_requested_at' => $invoice->payment_requested_at?->toISOString(),
+            'payment_expired_at' => $invoice->payment_expired_at?->toISOString(),
             'issued_at'       => $invoice->issued_at?->toISOString(),
             'due_at'          => $invoice->due_at?->toISOString(),
             'paid_at'         => $invoice->paid_at?->toISOString(),

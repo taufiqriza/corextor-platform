@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
     Receipt, Loader2, Check, Clock, AlertTriangle, XCircle,
     CreditCard, TrendingUp, FileText, ChevronDown, ChevronUp,
-    Crown, Infinity as InfinityIcon, Package, Shield,
+    Crown, Infinity as InfinityIcon, Package, Shield, ExternalLink,
 } from 'lucide-react';
 import type { Theme } from '@/theme/tokens';
 import { platformApi } from '@/api/platform.api';
@@ -12,6 +12,9 @@ type InvoiceItem = { id: number; description: string; quantity: number; unit_pri
 type Invoice = {
     id: number; invoice_number: string; status: string; currency: string;
     amount_total: number; issued_at: string | null; due_at: string | null; paid_at: string | null;
+    payment_provider?: string | null; payment_reference?: string | null;
+    payment_channel_code?: string | null; payment_checkout_url?: string | null;
+    payment_requested_at?: string | null; payment_expired_at?: string | null;
     items: InvoiceItem[];
 };
 type Stats = {
@@ -34,6 +37,7 @@ export function CompanyInvoicePanel({ T, isDesktop }: { T: Theme; isDesktop: boo
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
     const [expandedInvoice, setExpandedInvoice] = useState<number | null>(null);
+    const [payingInvoiceId, setPayingInvoiceId] = useState<number | null>(null);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -59,6 +63,7 @@ export function CompanyInvoicePanel({ T, isDesktop }: { T: Theme; isDesktop: boo
     const statusMeta = (s: string) => {
         switch (s) {
             case 'paid': return { label: 'Lunas', icon: Check, bg: `${T.success}14`, color: T.success, border: `${T.success}30` };
+            case 'issued':
             case 'pending': return { label: 'Menunggu', icon: Clock, bg: `${T.gold}14`, color: T.gold, border: `${T.gold}30` };
             case 'overdue': return { label: 'Jatuh Tempo', icon: AlertTriangle, bg: `${T.danger}12`, color: T.danger, border: `${T.danger}30` };
             case 'cancelled': return { label: 'Dibatalkan', icon: XCircle, bg: `${T.textMuted}10`, color: T.textMuted, border: `${T.textMuted}20` };
@@ -71,6 +76,32 @@ export function CompanyInvoicePanel({ T, isDesktop }: { T: Theme; isDesktop: boo
             case 'lifetime': return { label: 'Lifetime', color: T.gold, icon: Crown };
             case 'yearly': return { label: 'Tahunan', color: T.info, icon: Package };
             default: return { label: 'Bulanan', color: T.primary, icon: CreditCard };
+        }
+    };
+
+    const handlePayInvoice = async (invoice: Invoice) => {
+        setPayingInvoiceId(invoice.id);
+        try {
+            const response = await platformApi.createMyInvoiceTripaySession(invoice.id);
+            const data = response.data?.data;
+            const nextInvoice = data?.invoice as Invoice | undefined;
+            const session = data?.payment_session as { checkout_url?: string | null } | undefined;
+
+            if (nextInvoice) {
+                setInvoices(current => current.map(item => item.id === nextInvoice.id ? nextInvoice : item));
+            }
+
+            const checkoutUrl = session?.checkout_url ?? nextInvoice?.payment_checkout_url ?? invoice.payment_checkout_url;
+            if (checkoutUrl) {
+                window.open(checkoutUrl, '_blank', 'noopener,noreferrer');
+                return;
+            }
+
+            window.alert('Sesi pembayaran dibuat, tetapi URL checkout belum tersedia.');
+        } catch (error: any) {
+            window.alert(error?.response?.data?.message || 'Gagal membuat sesi pembayaran Tripay.');
+        } finally {
+            setPayingInvoiceId(null);
         }
     };
 
@@ -394,6 +425,59 @@ export function CompanyInvoicePanel({ T, isDesktop }: { T: Theme; isDesktop: boo
                                                         <span style={{ fontSize: 11, fontWeight: 600, color: T.success }}>
                                                             Dibayar pada {formatDate(inv.paid_at)}
                                                         </span>
+                                                    </div>
+                                                )}
+
+                                                {!!inv.payment_reference && (
+                                                    <div style={{
+                                                        display: 'grid', gap: 8, marginTop: 8,
+                                                    }}>
+                                                        <div style={{
+                                                            display: 'flex', justifyContent: 'space-between', gap: 12,
+                                                            padding: '10px 12px', borderRadius: 10, background: T.bgAlt, border: `1px solid ${T.border}`,
+                                                        }}>
+                                                            <span style={{ fontSize: 11, color: T.textMuted }}>Provider</span>
+                                                            <span style={{ fontSize: 11, fontWeight: 700, color: T.text }}>
+                                                                {(inv.payment_provider ?? 'tripay').toUpperCase()} • {inv.payment_channel_code ?? '-'}
+                                                            </span>
+                                                        </div>
+                                                        <div style={{
+                                                            display: 'flex', justifyContent: 'space-between', gap: 12,
+                                                            padding: '10px 12px', borderRadius: 10, background: T.bgAlt, border: `1px solid ${T.border}`,
+                                                        }}>
+                                                            <span style={{ fontSize: 11, color: T.textMuted }}>Referensi</span>
+                                                            <span style={{ fontSize: 11, fontWeight: 700, color: T.text }}>{inv.payment_reference}</span>
+                                                        </div>
+                                                        {inv.payment_expired_at && (
+                                                            <div style={{
+                                                                display: 'flex', justifyContent: 'space-between', gap: 12,
+                                                                padding: '10px 12px', borderRadius: 10, background: T.bgAlt, border: `1px solid ${T.border}`,
+                                                            }}>
+                                                                <span style={{ fontSize: 11, color: T.textMuted }}>Berlaku Hingga</span>
+                                                                <span style={{ fontSize: 11, fontWeight: 700, color: T.text }}>{formatDate(inv.payment_expired_at)}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {['issued', 'pending', 'overdue'].includes(inv.status) && (
+                                                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                                                        <button
+                                                            onClick={() => handlePayInvoice(inv)}
+                                                            disabled={payingInvoiceId === inv.id}
+                                                            style={{
+                                                                height: 40, padding: '0 14px', borderRadius: 11,
+                                                                background: T.primary, color: '#fff',
+                                                                fontSize: 12, fontWeight: 800, display: 'inline-flex',
+                                                                alignItems: 'center', gap: 8, opacity: payingInvoiceId === inv.id ? 0.7 : 1,
+                                                            }}
+                                                        >
+                                                            {payingInvoiceId === inv.id ? (
+                                                                <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Menyiapkan Tripay…</>
+                                                            ) : (
+                                                                <><ExternalLink size={14} /> {inv.payment_reference ? 'Lanjutkan Bayar' : 'Bayar via Tripay'}</>
+                                                            )}
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>

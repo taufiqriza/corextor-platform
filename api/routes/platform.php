@@ -6,7 +6,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\PlatformSettingController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\TripayWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,6 +26,9 @@ Route::prefix('platform/v1')->group(function () {
         Route::post('/auth/login/email', [AuthController::class, 'loginEmail']);
         Route::post('/auth/refresh', [AuthController::class, 'refresh']);
     });
+
+    // ── Public payment webhooks ──
+    Route::post('/payments/webhooks/tripay', [TripayWebhookController::class, 'paymentStatus']);
 
     // ── Authenticated routes (rate limited) ──
     Route::middleware(['jwt.auth', 'throttle:api-general'])->group(function () {
@@ -44,6 +49,11 @@ Route::prefix('platform/v1')->group(function () {
             Route::post('/team/invite', [TeamController::class, 'invite']);
             Route::put('/team/{userId}', [TeamController::class, 'update']);
             Route::delete('/team/{userId}', [TeamController::class, 'destroy']);
+
+            // Platform Settings
+            Route::get('/settings', [PlatformSettingController::class, 'show']);
+            Route::put('/settings/tripay', [PlatformSettingController::class, 'updateTripay']);
+            Route::post('/settings/tripay/test-connection', [PlatformSettingController::class, 'testTripayConnection']);
         });
 
         // ── Platform Team (super_admin + platform_staff) ──
@@ -90,6 +100,7 @@ Route::prefix('platform/v1')->group(function () {
         Route::middleware('role:company_admin,super_admin,platform_staff')->group(function () {
             Route::get('/company/subscriptions', [SubscriptionController::class, 'mySubscriptions']);
             Route::get('/company/invoices', [InvoiceController::class, 'myInvoices']);
+            Route::post('/company/invoices/{id}/payments/tripay', [InvoiceController::class, 'createMyTripayPaymentSession']);
 
             // Company profile management
             Route::get('/company/profile', [CompanyController::class, 'myProfile']);

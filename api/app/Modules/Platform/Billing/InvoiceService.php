@@ -58,11 +58,11 @@ class InvoiceService
         return [
             'total'         => $invoices->count(),
             'paid'          => $invoices->where('status', 'paid')->count(),
-            'pending'       => $invoices->where('status', 'pending')->count(),
+            'pending'       => $invoices->whereIn('status', ['pending', 'issued'])->count(),
             'overdue'       => $invoices->where('status', 'overdue')->count(),
             'total_amount'  => (float) $invoices->sum('amount_total'),
             'paid_amount'   => (float) $invoices->where('status', 'paid')->sum('amount_total'),
-            'unpaid_amount' => (float) $invoices->whereIn('status', ['pending', 'overdue'])->sum('amount_total'),
+            'unpaid_amount' => (float) $invoices->whereIn('status', ['pending', 'issued', 'overdue'])->sum('amount_total'),
         ];
     }
 
@@ -77,7 +77,7 @@ class InvoiceService
             'company_id'      => $data['company_id'],
             'subscription_id' => $data['subscription_id'] ?? null,
             'invoice_number'  => self::generateInvoiceNumber(),
-            'status'          => 'pending',
+            'status'          => 'issued',
             'currency'        => $data['currency'] ?? 'IDR',
             'amount_total'    => $data['amount_total'] ?? 0,
             'issued_at'       => now(),
@@ -144,7 +144,7 @@ class InvoiceService
      */
     public static function markOverdue(): int
     {
-        return Invoice::where('status', 'pending')
+        return Invoice::whereIn('status', ['pending', 'issued'])
             ->where('due_at', '<', now())
             ->update(['status' => 'overdue']);
     }

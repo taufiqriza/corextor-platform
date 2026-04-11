@@ -95,7 +95,11 @@ export function InvoicePanel({ T, isDesktop }: Props) {
                 inv.company?.name?.toLowerCase().includes(q)
             );
         }
-        if (statusFilter !== 'all') list = list.filter(inv => inv.status === statusFilter);
+        if (statusFilter !== 'all') {
+            list = list.filter(inv => statusFilter === 'pending'
+                ? ['pending', 'issued'].includes(inv.status)
+                : inv.status === statusFilter);
+        }
         return list;
     }, [invoices, search, statusFilter]);
 

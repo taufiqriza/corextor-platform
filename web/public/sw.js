@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = `corextor-static-${CACHE_VERSION}`;
 const CACHE_PREFIX = 'corextor-static-';
 
@@ -27,29 +27,10 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api')) return;
 
-  if (request.mode === 'navigate') {
-    event.respondWith(handleNavigationRequest(request));
-    return;
-  }
-
   if (isStaticAssetRequest(url.pathname)) {
     event.respondWith(handleStaticAssetRequest(request));
   }
 });
-
-async function handleNavigationRequest(request) {
-  const cache = await caches.open(STATIC_CACHE);
-
-  try {
-    const fresh = await fetch(request);
-    if (fresh && fresh.status === 200 && fresh.type === 'basic') {
-      cache.put(request, fresh.clone());
-    }
-    return fresh;
-  } catch {
-    return cache.match(request);
-  }
-}
 
 async function handleStaticAssetRequest(request) {
   const cache = await caches.open(STATIC_CACHE);
