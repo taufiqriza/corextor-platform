@@ -52,6 +52,7 @@ Route::prefix('platform/v1')->group(function () {
 
             // Platform Settings
             Route::get('/settings', [PlatformSettingController::class, 'show']);
+            Route::put('/settings/company', [PlatformSettingController::class, 'updateCompany']);
             Route::put('/settings/tripay', [PlatformSettingController::class, 'updateTripay']);
             Route::post('/settings/tripay/test-connection', [PlatformSettingController::class, 'testTripayConnection']);
         });

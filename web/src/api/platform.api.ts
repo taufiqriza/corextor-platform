@@ -19,6 +19,11 @@ import type {
     PayrollRunListPayload,
     PayrollSchedule,
 } from '@/types/payroll.types';
+import type {
+    PlatformSettingsPayload,
+    UpdatePlatformCompanySettingsPayload,
+    UpdateTripaySettingsPayload,
+} from '@/types/platform-settings.types';
 
 export const platformApi = {
     // Auth — Admin (email + password)
@@ -111,21 +116,24 @@ export const platformApi = {
 
     // Platform settings
     getPlatformSettings: () =>
-        api.get('/platform/v1/settings'),
-    updateTripaySettings: (data: {
-        mode?: 'test' | 'live';
-        base_url?: string;
-        merchant_code?: string;
-        api_key?: string;
-        private_key?: string;
-        clear_api_key?: boolean;
-        clear_private_key?: boolean;
-        webhook_url?: string;
-        bank_transfer_channel?: string;
-        ewallet_channel?: string;
-    }) => api.put('/platform/v1/settings/tripay', data),
+        api.get<{ status: string; message: string; data: PlatformSettingsPayload }>('/platform/v1/settings'),
+    updatePlatformCompanySettings: (data: UpdatePlatformCompanySettingsPayload) =>
+        api.put<{ status: string; message: string; data: PlatformSettingsPayload }>('/platform/v1/settings/company', data),
+    updateTripaySettings: (data: UpdateTripaySettingsPayload) =>
+        api.put<{ status: string; message: string; data: PlatformSettingsPayload }>('/platform/v1/settings/tripay', data),
     testTripayConnection: () =>
-        api.post('/platform/v1/settings/tripay/test-connection'),
+        api.post<{
+            status: string;
+            message: string;
+            data: {
+                ok: boolean;
+                message: string;
+                channels_count?: number;
+                status_code?: number;
+                configured_base_url?: string;
+                expected_base_url?: string;
+            };
+        }>('/platform/v1/settings/tripay/test-connection'),
 
     // Invoices
     getInvoices: (params?: { company_id?: number; status?: string }) =>
